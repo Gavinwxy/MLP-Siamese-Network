@@ -3,7 +3,7 @@ import torch
 from torchvision import transforms, datasets
 from torch.autograd import Variable
 
-root = 'D:/Lab/mlpproject/Extracted_Base'
+root = 'D:/Lab/mlpproject/SampleData'
 
 data_transform = transforms.Compose([
     transforms.Grayscale(),

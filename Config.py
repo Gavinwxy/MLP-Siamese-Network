@@ -1,7 +1,7 @@
 class Config():
-    train_dir = "D:/Lab/mlpproject/Extracted_Base/train"
-    valid_dir = "D:/Lab/mlpproject/Extracted_Base/valid"
-    test_dir = "D:/Lab/mlpproject/Extracted_Base/test"
+    train_dir = "D:/Lab/mlpproject/SampleData/train"
+    valid_dir = "D:/Lab/mlpproject/SampleData/valid"
+    test_dir = "D:/Lab/mlpproject/SampleData/test"
     train_number_epochs = 100
     train_batch_size = 64
     valid_batch_size = 1
