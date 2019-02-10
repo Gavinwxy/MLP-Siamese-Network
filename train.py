@@ -63,7 +63,7 @@ def train(model, loss_func, lr):
     net = type(model)()
     net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth'))) # Instantialize the model before loading the parameters
 
-def data_loaders(model):
+def data_loaders(model, train_dataset, valid_dataset, test_dataset):
     data_transform = transforms.Compose([
         transforms.Resize(model.input_size),
         transforms.RandomHorizontalFlip(),
@@ -101,7 +101,7 @@ grid_search = {
 
 search_times = 1
 for model in grid_search['model']:
-    train_loader, valid_loader, test_loader = data_loaders(model)
+    train_loader, valid_loader, test_loader = data_loaders(model, train_dataset, valid_dataset, test_dataset)
 
     for loss_func in grid_search['loss_func']:
         for lr in grid_search['lr']:
