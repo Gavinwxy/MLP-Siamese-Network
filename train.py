@@ -113,8 +113,9 @@ valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
 test_dataset = datasets.ImageFolder(root=Config.test_dir)
 
 search_times = 1
-best_model, best_valid_loss = (0, np.inf)
 best_config = {key:None for key in grid_search.keys()}
+best_config['search_best'] = 0
+best_config['best_valid_loss'] = np.inf
 
 for model in grid_search['model']:
     train_loader, valid_loader, _ = data_loaders(model, train_dataset, valid_dataset, test_dataset)
@@ -123,22 +124,23 @@ for model in grid_search['model']:
         for lr in grid_search['lr']:
             final_valid_loss = train(train_loader, valid_loader, model=model, loss_func=loss_func, lr=lr)
             
-            if final_valid_loss < best_valid_loss:
-                best_model, best_valid_loss = search_times, final_valid_loss
+            if final_valid_loss < best_config['best_valid_loss']:
                 best_config['model'] = model
                 best_config['loss_func'] = loss_func
                 best_config['lr'] = lr
+                best_config['search_best'] = search_times
+                best_config['best_valid_loss'] = final_valid_loss
             
             print("\nGrid search {} is completed.\n".format(search_times))
             search_times += 1
 
-print("The best model is model {} with final valid loss {:.4f}".format(best_model, best_valid_loss))
+print("The best model is model {} with final valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
 np.save('best_config.npy', best_config)
 read_dictionary = np.load('best_config.npy').item()
 
 #best_net = type(best_config['model'])().cuda()
 best_net = type(best_config['model'])()
-best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_model) + 'pth'))) # Instantialize the model before loading the parameters
+best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + 'pth'))) # Instantialize the model before loading the parameters
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
 test_loss = evaluate(test_loader, best_net=best_net, loss_func=best_config['loss_func'])
