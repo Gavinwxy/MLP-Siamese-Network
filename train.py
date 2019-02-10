@@ -12,7 +12,6 @@ valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
 test_dataset = datasets.ImageFolder(root=Config.test_dir)
 
 data_transform = transforms.Compose([
-    transforms.Grayscale(),
     transforms.Resize(Config.size),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor()
@@ -34,7 +33,7 @@ train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Con
 valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True)
 test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=Config.test_batch_size, shuffle=True)
 
-net = model.DeepID().cuda()
+net = model.DeepID()
 criterion = loss.ContrastiveLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.005)
 
@@ -45,14 +44,15 @@ iteration_number = 0
 for epoch in range(0, Config.train_number_epochs):
     for i, data in enumerate(train_loader, 0):
         img0, img1, label = data
-        img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+        #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+        img0, img1, label = img0, img1, label
         optimizer.zero_grad()
         output1, output2 = net(img0, img1)
         loss_contrastive = criterion(output1, output2, label)
         loss_contrastive.backward()
         optimizer.step()
         if i % 10 == 0:
-            print("Epoch number {}\n Current loss {}\n".format(epoch, loss_contrastive.item()))
+            print("Epoch number: {}\n Current progress: {:.1f}%\n Current loss: {:.3f}\n".format(epoch, epoch/Config.train_number_epochs*100, loss_contrastive.item()))
             iteration_number += 10
             counter.append(iteration_number)
             loss_history.append(loss_contrastive.item())
