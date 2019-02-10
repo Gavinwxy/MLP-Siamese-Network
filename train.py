@@ -135,8 +135,6 @@ for model in grid_search['model']:
             search_times += 1
 
 print("The best model is model {} with final valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
-np.save('best_config.npy', best_config)
-read_dictionary = np.load('best_config.npy').item()
 
 #best_net = type(best_config['model'])().cuda()
 best_net = type(best_config['model'])()
@@ -146,3 +144,7 @@ _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_da
 test_loss = evaluate(test_loader, best_net=best_net, loss_func=best_config['loss_func'])
 
 print("The test loss for the best model is {:.4f}".format(test_loss))
+
+best_config['test_loss'] = test_loss
+np.save('best_config.npy', best_config)
+read_dictionary = np.load('best_config.npy').item()
