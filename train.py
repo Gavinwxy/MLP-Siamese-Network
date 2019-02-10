@@ -49,7 +49,6 @@ num_batch_val = len(valid_loader)
 
 for epoch in range(Config.train_number_epochs):
     loss_per_batch = {"train_loss": [], "valid_loss": []}
-    loss_current_epoch = {"train_loss":[], "val_loss": []}
     print("Epoch number: %d" % (epoch+1))
 
     with tqdm.tqdm(total=num_batch_train) as pbar_train:
@@ -76,7 +75,7 @@ for epoch in range(Config.train_number_epochs):
             loss_contrastive = criterion(output1, output2, label)
             loss = loss_contrastive.item()
             loss_per_batch["valid_loss"].append(loss)
-            pbar_val.set_description("val loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
+            pbar_val.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
             pbar_val.update(1)
     
     print()
