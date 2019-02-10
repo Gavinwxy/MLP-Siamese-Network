@@ -11,17 +11,16 @@ import tqdm
 import numpy as np
 
 
-def train(model, loss_func, lr):
+def train(train_loader, valid_loader, **param):
     #net = type(model)().cuda()
-    net = type(model)()
-    criterion = loss_func
-    optimizer = optim.Adam(net.parameters(), lr=lr)
+    net = type(param['model'])()
+    criterion = param['loss_func']
+    optimizer = optim.Adam(net.parameters(), lr=param['lr'])
 
-    counter = []
     iteration_number = 0
     loss_per_epoch = {"train_loss": [], "valid_loss": []}
     num_batch_train = len(train_loader)
-    num_batch_val = len(valid_loader)
+    num_batch_valid = len(valid_loader)
 
     for epoch in range(Config.train_number_epochs):
         loss_per_batch = {"train_loss": [], "valid_loss": []}
@@ -31,37 +30,51 @@ def train(model, loss_func, lr):
             for i, data in enumerate(train_loader, 0): # Train for one batch
                 img0, img1, label = data
                 #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
-                img0, img1, label = img0, img1, label
                 optimizer.zero_grad()
                 output1, output2 = net(img0, img1)
                 loss = criterion(output1, output2, label)
                 loss.backward()
                 optimizer.step()
-                #loss = loss_func.item()
                 loss_per_batch["train_loss"].append(loss.item())
                 pbar_train.set_description("train loss: {:.4f}".format(np.mean(loss_per_batch['train_loss'])))
                 pbar_train.update(1)
 
-        with tqdm.tqdm(total=num_batch_val) as pbar_val:
+        with tqdm.tqdm(total=num_batch_valid) as pbar_valid:
             for i, data in enumerate(valid_loader, 0): # Evaluation for one batch
                 img0, img1, label = data
                 #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
-                img0, img1, label = img0, img1, label
                 output1, output2 = net.forward(img0, img1)
                 loss = criterion(output1, output2, label)
-                #loss = loss.item()
                 loss_per_batch["valid_loss"].append(loss.item())
-                pbar_val.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
-                pbar_val.update(1)
+                pbar_valid.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
+                pbar_valid.update(1)
         
         for key, value in loss_per_batch.items(): # Collect average loss for current epoch
             loss_per_epoch[key].append(np.mean(value))
 
     torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
 
-    #net = type(model)().cuda()
-    net = type(model)()
-    net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth'))) # Instantialize the model before loading the parameters
+    return loss_per_epoch['valid_loss'][-1]
+
+def evaluate(test_loader, **param):
+    net = param['best_net']
+    criterion = param['loss_func']
+
+    num_batch_test = len(test_loader)
+    loss_per_batch = []
+
+    with tqdm.tqdm(total=num_batch_test) as pbar_test:
+        for i, data in enumerate(test_loader, 0): # Test for one batch
+            img0, img1, label = data
+            #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+            output1, output2 = net(img0, img1)
+            loss = criterion(output1, output2, label)
+            loss.backward()
+            loss_per_batch.append(loss.item())
+            pbar_test.set_description("test loss: {:.4f}".format(np.mean(loss_per_batch)))
+            pbar_test.update(1)
+
+    return np.mean(loss_per_batch)
 
 def data_loaders(model, train_dataset, valid_dataset, test_dataset):
     data_transform = transforms.Compose([
@@ -89,23 +102,45 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
     return train_loader, valid_loader, test_loader
 
 
-train_dataset = datasets.ImageFolder(root=Config.train_dir)
-valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
-test_dataset = datasets.ImageFolder(root=Config.test_dir)
-
 grid_search = {
     "model": [model.DeepID(), model.ChopraNet()],
     "loss_func": [loss.ContrastiveLoss()],
     "lr": [0.005]
 }
 
+train_dataset = datasets.ImageFolder(root=Config.train_dir)
+valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
+test_dataset = datasets.ImageFolder(root=Config.test_dir)
+
 search_times = 1
+best_model, best_valid_loss = (0, np.inf)
+best_config = {key:None for key in grid_search.keys()}
+
 for model in grid_search['model']:
-    train_loader, valid_loader, test_loader = data_loaders(model, train_dataset, valid_dataset, test_dataset)
+    train_loader, valid_loader, _ = data_loaders(model, train_dataset, valid_dataset, test_dataset)
 
     for loss_func in grid_search['loss_func']:
         for lr in grid_search['lr']:
-            train(model, loss_func, lr)
-
+            final_valid_loss = train(train_loader, valid_loader, model=model, loss_func=loss_func, lr=lr)
+            
+            if final_valid_loss < best_valid_loss:
+                best_model, best_valid_loss = search_times, final_valid_loss
+                best_config['model'] = model
+                best_config['loss_func'] = loss_func
+                best_config['lr'] = lr
+            
             print("\nGrid search {} is completed.\n".format(search_times))
             search_times += 1
+
+print("The best model is model {} with final valid loss {:.4f}".format(best_model, best_valid_loss))
+np.save('best_config.npy', best_config)
+read_dictionary = np.load('best_config.npy').item()
+
+#best_net = type(best_config['model'])().cuda()
+best_net = type(best_config['model'])()
+best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_model) + 'pth'))) # Instantialize the model before loading the parameters
+
+_, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
+test_loss = evaluate(test_loader, best_net=best_net, loss_func=best_config['loss_func'])
+
+print("The test loss for the best model is {:.4f}".format(test_loss))
