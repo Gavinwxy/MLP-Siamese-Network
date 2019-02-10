@@ -1,3 +1,4 @@
+import os
 import model
 import loss
 import torch
@@ -14,77 +15,89 @@ train_dataset = datasets.ImageFolder(root=Config.train_dir)
 valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
 test_dataset = datasets.ImageFolder(root=Config.test_dir)
 
-data_transform = transforms.Compose([
-    transforms.Resize(Config.size),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor()
-])
 
-siamese_train_dataset = SiameseNetworkDataset(imageFolderDataset=train_dataset,
-                                              transform=data_transform,
-                                              should_invert=False)
+grid_search = {
+    "model": [model.DeepID(), model.ChopraNet()],
+    "loss_func": [loss.ContrastiveLoss()],
+    "lr": [0.005]
+}
 
-siamese_valid_dataset = SiameseNetworkDataset(imageFolderDataset=valid_dataset,
-                                              transform=data_transform,
-                                              should_invert=False)
+search_times = 1
+for model in grid_search['model']:
+    data_transform = transforms.Compose([
+        transforms.Resize(model.input_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor()
+    ])
 
-siamese_test_dataset = SiameseNetworkDataset(imageFolderDataset=test_dataset,
-                                             transform=data_transform,
-                                             should_invert=False)
+    siamese_train_dataset = SiameseNetworkDataset(imageFolderDataset=train_dataset,
+                                                  transform=data_transform,
+                                                  should_invert=False)
 
-train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Config.train_batch_size, shuffle=True)
-valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True)
-test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=Config.test_batch_size, shuffle=True)
+    siamese_valid_dataset = SiameseNetworkDataset(imageFolderDataset=valid_dataset,
+                                                  transform=data_transform,
+                                                  should_invert=False)
 
-net = model.DeepID().cuda()
-#net = model.DeepID()
-criterion = loss.ContrastiveLoss()
-optimizer = optim.Adam(net.parameters(), lr=0.005)
+    siamese_test_dataset = SiameseNetworkDataset(imageFolderDataset=test_dataset,
+                                                 transform=data_transform,
+                                                 should_invert=False)
 
-counter = []
-iteration_number = 0
-loss_per_epoch = {"train_loss": [], "valid_loss": []}
-num_batch_train = len(train_loader)
-num_batch_val = len(valid_loader)
+    train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Config.train_batch_size, shuffle=True)
+    valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=Config.test_batch_size, shuffle=True)
 
-for epoch in range(Config.train_number_epochs):
-    loss_per_batch = {"train_loss": [], "valid_loss": []}
-    print("Epoch number: %d" % (epoch+1))
+    for loss_func in grid_search['loss_func']:
+        for lr in grid_search['lr']:
+            #net = type(model)().cuda()
+            net = type(model)()
+            criterion = loss_func
+            optimizer = optim.Adam(net.parameters(), lr=lr)
 
-    with tqdm.tqdm(total=num_batch_train) as pbar_train:
-        for i, data in enumerate(train_loader, 0): # Train for one epoch
-            img0, img1, label = data
-            img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
-            #img0, img1, label = img0, img1, label
-            optimizer.zero_grad()
-            output1, output2 = net(img0, img1)
-            loss_contrastive = criterion(output1, output2, label)
-            loss_contrastive.backward()
-            optimizer.step()
-            loss = loss_contrastive.item()
-            loss_per_batch["train_loss"].append(loss)
-            pbar_train.set_description("train loss: {:.4f}".format(np.mean(loss_per_batch['train_loss'])))
-            pbar_train.update(1)
+            counter = []
+            iteration_number = 0
+            loss_per_epoch = {"train_loss": [], "valid_loss": []}
+            num_batch_train = len(train_loader)
+            num_batch_val = len(valid_loader)
 
-    with tqdm.tqdm(total=num_batch_val) as pbar_val:
-        for i, data in enumerate(valid_loader, 0): # Evaluation for one epoch
-            img0, img1, label = data
-            img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
-            #img0, img1, label = img0, img1, label
-            output1, output2 = net.forward(img0, img1)
-            loss_contrastive = criterion(output1, output2, label)
-            loss = loss_contrastive.item()
-            loss_per_batch["valid_loss"].append(loss)
-            pbar_val.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
-            pbar_val.update(1)
-    
-    print()
-    for key, value in loss_per_batch.items(): # Collect average loss for current epoch
-        loss_per_epoch[key].append(np.mean(value))
+            for epoch in range(Config.train_number_epochs):
+                loss_per_batch = {"train_loss": [], "valid_loss": []}
+                print("Epoch number: %d" % (epoch+1))
 
+                with tqdm.tqdm(total=num_batch_train) as pbar_train:
+                    for i, data in enumerate(train_loader, 0): # Train for one batch
+                        img0, img1, label = data
+                        #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+                        img0, img1, label = img0, img1, label
+                        optimizer.zero_grad()
+                        output1, output2 = net(img0, img1)
+                        loss = criterion(output1, output2, label)
+                        loss.backward()
+                        optimizer.step()
+                        #loss = loss_func.item()
+                        loss_per_batch["train_loss"].append(loss.item())
+                        pbar_train.set_description("train loss: {:.4f}".format(np.mean(loss_per_batch['train_loss'])))
+                        pbar_train.update(1)
 
-torch.save(net.state_dict(), f="/Users/yantiz/Desktop/ML课程/MLP/MLP-Siamese-Network/model/model.pth") # Model saving, Only save the parameters (Recommended)
+                with tqdm.tqdm(total=num_batch_val) as pbar_val:
+                    for i, data in enumerate(valid_loader, 0): # Evaluation for one batch
+                        img0, img1, label = data
+                        #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+                        img0, img1, label = img0, img1, label
+                        output1, output2 = net.forward(img0, img1)
+                        loss = criterion(output1, output2, label)
+                        #loss = loss.item()
+                        loss_per_batch["valid_loss"].append(loss.item())
+                        pbar_val.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
+                        pbar_val.update(1)
+                
+                for key, value in loss_per_batch.items(): # Collect average loss for current epoch
+                    loss_per_epoch[key].append(np.mean(value))
 
-model = model.DeepID().cuda()
-#model = model.DeepID()
-model.load_state_dict(torch.load("/Users/yantiz/Desktop/ML课程/MLP/MLP-Siamese-Network/model/model.pth")) # Instantialize the model before loading the parameters
+            torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
+
+            #net = type(model)().cuda()
+            net = type(model)()
+            net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth'))) # Instantialize the model before loading the parameters
+
+        print("\nGrid search {} is completed.\n".format(search_times))
+        search_times += 1

@@ -5,6 +5,7 @@ from torchsummary import summary
 
 
 class DeepID(nn.Module):
+    input_size = (39, 31)
 
     def __init__(self):
         super(DeepID, self).__init__()
@@ -39,6 +40,7 @@ class DeepID(nn.Module):
 
 
 class ChopraNet(nn.Module):
+    input_size = (56, 46)
 
     def __init__(self):
         super(ChopraNet, self).__init__()
