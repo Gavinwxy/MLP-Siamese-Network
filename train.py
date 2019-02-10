@@ -4,7 +4,7 @@ import torch
 from torch import optim
 from torchvision import transforms, datasets
 from torch.autograd import Variable
-from SiameseNetworkDataset import SiameseNetworkDataset
+from dataset import SiameseNetworkDataset
 from Config import Config
 
 train_dataset = datasets.ImageFolder(root=Config.train_dir)
