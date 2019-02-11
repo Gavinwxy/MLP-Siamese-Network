@@ -145,7 +145,7 @@ print("The best model is model {} with final valid loss {:.4f}".format(best_conf
 
 #best_net = type(best_config['model'])().cuda()
 best_net = type(best_config['model'])()
-best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + 'pth'))) # Instantialize the model before loading the parameters
+best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
 test_loss = evaluate(test_loader, best_net=best_net, loss_func=best_config['loss_func'])
