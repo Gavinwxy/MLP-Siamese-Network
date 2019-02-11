@@ -57,9 +57,6 @@ def train(train_loader, valid_loader, search_times, **param):
                 best_epoch = epoch + 1                       
                 torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
 
-    #torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
-
-    #return loss_per_epoch['valid_loss'][-1]
     return np.min(loss_per_epoch['valid_loss']), best_epoch
 
 def evaluate(test_loader, **param):
