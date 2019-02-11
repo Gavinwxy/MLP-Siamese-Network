@@ -55,7 +55,7 @@ def train(train_loader, valid_loader, search_times, **param):
 
         if loss_per_epoch['valid_loss'][-1] == np.min(loss_per_epoch['valid_loss']):
                 best_epoch = epoch + 1                       
-                torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
+                torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + '.pth')) # Model saving, Only save the parameters (Recommended)
 
     return np.min(loss_per_epoch['valid_loss']), best_epoch
 
@@ -105,7 +105,7 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model.DeepID(), model.ChopraNet()],
+    "model": [model.ChopraNet()],
     #"loss_func": [loss.ContrastiveLoss()],
     "loss_func": [loss.ChopraLoss()],
     "lr": [0.005]
