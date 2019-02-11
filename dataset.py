@@ -4,6 +4,9 @@ import random
 from PIL import Image
 import PIL.ImageOps
 import torch
+from torchvision import transforms
+
+from Config import Config
 
 class SiameseNetworkDataset(Dataset):
 
@@ -47,3 +50,28 @@ class SiameseNetworkDataset(Dataset):
 
     def __len__(self):
         return len(self.imageFolderDataset.imgs)
+
+def data_loaders(model, train_dataset, valid_dataset, test_dataset):
+    data_transform = transforms.Compose([
+        transforms.Resize(model.input_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor()
+    ])
+
+    siamese_train_dataset = SiameseNetworkDataset(imageFolderDataset=train_dataset,
+                                                  transform=data_transform,
+                                                  should_invert=False)
+
+    siamese_valid_dataset = SiameseNetworkDataset(imageFolderDataset=valid_dataset,
+                                                  transform=data_transform,
+                                                  should_invert=False)
+
+    siamese_test_dataset = SiameseNetworkDataset(imageFolderDataset=test_dataset,
+                                                 transform=data_transform,
+                                                 should_invert=False)
+
+    train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Config.train_batch_size, shuffle=True)
+    valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=Config.test_batch_size, shuffle=True)
+
+    return train_loader, valid_loader, test_loader
