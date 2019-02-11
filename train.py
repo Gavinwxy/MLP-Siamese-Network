@@ -11,7 +11,7 @@ import tqdm
 import numpy as np
 
 
-def train(train_loader, valid_loader, **param):
+def train(train_loader, valid_loader, search_times, **param):
     #net = type(model)().cuda()
     net = type(param['model'])()
     criterion = param['loss_func']
@@ -104,7 +104,8 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
 
 grid_search = {
     "model": [model.DeepID(), model.ChopraNet()],
-    "loss_func": [loss.ContrastiveLoss()],
+    #"loss_func": [loss.ContrastiveLoss()],
+    "loss_func": [loss.ChopraLoss()],
     "lr": [0.005]
 }
 
@@ -122,7 +123,7 @@ for model in grid_search['model']:
 
     for loss_func in grid_search['loss_func']:
         for lr in grid_search['lr']:
-            final_valid_loss = train(train_loader, valid_loader, model=model, loss_func=loss_func, lr=lr)
+            final_valid_loss = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, lr=lr)
             
             if final_valid_loss < best_config['best_valid_loss']:
                 best_config['model'] = model
@@ -130,6 +131,8 @@ for model in grid_search['model']:
                 best_config['lr'] = lr
                 best_config['search_best'] = search_times
                 best_config['best_valid_loss'] = final_valid_loss
+
+                np.save('best_config.npy', best_config)
             
             print("\nGrid search {} is completed.\n".format(search_times))
             search_times += 1
@@ -142,8 +145,6 @@ best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
 test_loss = evaluate(test_loader, best_net=best_net, loss_func=best_config['loss_func'])
-
-print("The test loss for the best model is {:.4f}".format(test_loss))
 
 best_config['test_loss'] = test_loss
 np.save('best_config.npy', best_config)
