@@ -22,6 +22,7 @@ def train(train_loader, valid_loader, search_times, **param):
     num_batch_train = len(train_loader)
     num_batch_valid = len(valid_loader)
 
+    best_epoch = 1
     for epoch in range(Config.train_number_epochs):
         loss_per_batch = {"train_loss": [], "valid_loss": []}
         print("Epoch number: %d" % (epoch+1))
@@ -48,13 +49,18 @@ def train(train_loader, valid_loader, search_times, **param):
                 loss_per_batch["valid_loss"].append(loss.item())
                 pbar_valid.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
                 pbar_valid.update(1)
-        
+
         for key, value in loss_per_batch.items(): # Collect average loss for current epoch
             loss_per_epoch[key].append(np.mean(value))
 
-    torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
+        if loss_per_epoch['valid_loss'][-1] == np.min(loss_per_epoch['valid_loss']):
+                best_epoch = epoch + 1                       
+                torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
 
-    return loss_per_epoch['valid_loss'][-1]
+    #torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + 'pth')) # Model saving, Only save the parameters (Recommended)
+
+    #return loss_per_epoch['valid_loss'][-1]
+    return np.min(loss_per_epoch['valid_loss']), best_epoch
 
 def evaluate(test_loader, **param):
     net = param['best_net']
@@ -69,7 +75,6 @@ def evaluate(test_loader, **param):
             #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
             output1, output2 = net(img0, img1)
             loss = criterion(output1, output2, label)
-            loss.backward()
             loss_per_batch.append(loss.item())
             pbar_test.set_description("test loss: {:.4f}".format(np.mean(loss_per_batch)))
             pbar_test.update(1)
@@ -117,13 +122,14 @@ search_times = 1
 best_config = {key:None for key in grid_search.keys()}
 best_config['search_best'] = 0
 best_config['best_valid_loss'] = np.inf
+best_config['best_epoch'] = 1
 
 for model in grid_search['model']:
     train_loader, valid_loader, _ = data_loaders(model, train_dataset, valid_dataset, test_dataset)
 
     for loss_func in grid_search['loss_func']:
         for lr in grid_search['lr']:
-            final_valid_loss = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, lr=lr)
+            final_valid_loss, best_epoch = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, lr=lr)
             
             if final_valid_loss < best_config['best_valid_loss']:
                 best_config['model'] = model
@@ -131,6 +137,7 @@ for model in grid_search['model']:
                 best_config['lr'] = lr
                 best_config['search_best'] = search_times
                 best_config['best_valid_loss'] = final_valid_loss
+                best_config['best_epoch'] = best_epoch
 
                 np.save('best_config.npy', best_config)
             
