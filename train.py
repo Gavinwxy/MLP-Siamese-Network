@@ -10,12 +10,14 @@ from Config import Config
 import tqdm
 import numpy as np
 from sklearn.metrics import roc_auc_score
+import torch.nn.functional as F
+from functools import partial
 
 
 def train(train_loader, valid_loader, search_times, **param):
     #net = type(model)().cuda()
-    net = type(param['model'])()
-    criterion = param['loss_func']
+    net = param['model']()
+    criterion = param['loss_func'](metric=param['metric'])
     optimizer = optim.Adam(net.parameters(), lr=param['lr'])
 
     iteration_number = 0
@@ -60,29 +62,28 @@ def train(train_loader, valid_loader, search_times, **param):
 
     return np.min(loss_per_epoch['valid_loss']), best_epoch
 
-def evaluate(test_loader, **param):
+def evaluate(test_loader, loop_times, **param):
     net = param['best_net']
-    criterion = param['loss_func']
+    metric = param['metric']
 
-    loop_times = 5
     roc_auc_scores = []
-    
-    for _ in range(loop_times):
-        y_true = []
-        y_score = []
-        for i, data in enumerate(test_loader, 0): # Test for one batch
-            img0, img1, label = data
-            output1, output2 = net(img0, img1)
-            criterion(output1, output2, label)
+    with tqdm.tqdm(total=loop_times) as pbar_test:
+        for _ in range(loop_times):
+            y_true = []
+            y_score = []
+            for i, data in enumerate(test_loader, 0):
+                img0, img1, label = data
+                output1, output2 = net(img0, img1)
+                distance = metric(output1, output2).item()
 
-            y_true.append(label)
-            y_score.append(criterion.distance.item())
-    
-        roc_auc_scores.append(roc_auc_score(y_true, y_score))
+                y_true.append(label)
+                y_score.append(distance)
+        
+            roc_auc_scores.append(roc_auc_score(y_true, y_score))
+            pbar_test.set_description("ROC_AUC score: {:.4f}".format(np.mean(roc_auc_scores)))
+            pbar_test.update(1)
 
-    average_score = np.mean(roc_auc_scores)
-    print("The {}-time average performance on test set is {:.4f}".format(loop_times, average_score))
-    return average_score
+    return np.mean(roc_auc_scores)
 
 def data_loaders(model, train_dataset, valid_dataset, test_dataset):
     data_transform = transforms.Compose([
@@ -111,9 +112,9 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model.ChopraNet()],
-    #"loss_func": [loss.ContrastiveLoss()],
-    "loss_func": [loss.ChopraLoss()],
+    "model": [model.ChopraNet],
+    "loss_func": [loss.ChopraLoss],
+    "metric": [partial(F.pairwise_distance, p=2)],
     "lr": [0.005]
 }
 
@@ -122,6 +123,7 @@ valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
 test_dataset = datasets.ImageFolder(root=Config.test_dir)
 
 search_times = 1
+# Dictionary that stores the best configuration:
 best_config = {key:None for key in grid_search.keys()}
 best_config['search_best'] = 0
 best_config['best_valid_loss'] = np.inf
@@ -131,30 +133,32 @@ for model in grid_search['model']:
     train_loader, valid_loader, _ = data_loaders(model, train_dataset, valid_dataset, test_dataset)
 
     for loss_func in grid_search['loss_func']:
-        for lr in grid_search['lr']:
-            best_valid_loss, best_epoch = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, lr=lr)
-            
-            if best_valid_loss < best_config['best_valid_loss']:
-                best_config['model'] = model
-                best_config['loss_func'] = loss_func
-                best_config['lr'] = lr
-                best_config['search_best'] = search_times
-                best_config['best_valid_loss'] = best_valid_loss
-                best_config['best_epoch'] = best_epoch
+        for metric in grid_search['metric']:
+            for lr in grid_search['lr']:
+                best_valid_loss, best_epoch = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, metric=metric, lr=lr)
+                
+                if best_valid_loss < best_config['best_valid_loss']:
+                    best_config['model'] = model
+                    best_config['loss_func'] = loss_func
+                    best_config['metric'] = metric
+                    best_config['lr'] = lr
+                    best_config['search_best'] = search_times
+                    best_config['best_valid_loss'] = best_valid_loss
+                    best_config['best_epoch'] = best_epoch
 
-                np.save('best_config.npy', best_config)
-            
-            print("\nGrid search {} is completed.\n".format(search_times))
-            search_times += 1
+                    np.save('best_config.npy', best_config)
+                
+                print("\nGrid search {} is completed.\n".format(search_times))
+                search_times += 1
 
 print("The best model is model {} with best valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
 
 #best_net = type(best_config['model'])().cuda()
-best_net = type(best_config['model'])()
+best_net = best_config['model']()
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
-test_loss = evaluate(test_loader, best_net=best_net, loss_func=best_config['loss_func'])
+test_loss = evaluate(test_loader, 5, best_net=best_net, metric=best_config['metric'])
 
 best_config['performance'] = test_loss
 np.save('best_config.npy', best_config)
