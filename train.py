@@ -9,6 +9,7 @@ from dataset import SiameseNetworkDataset
 from Config import Config
 import tqdm
 import numpy as np
+from sklearn.metrics import roc_auc_score
 
 
 def train(train_loader, valid_loader, search_times, **param):
@@ -63,20 +64,25 @@ def evaluate(test_loader, **param):
     net = param['best_net']
     criterion = param['loss_func']
 
-    num_batch_test = len(test_loader)
-    loss_per_batch = []
-
-    with tqdm.tqdm(total=num_batch_test) as pbar_test:
+    loop_times = 5
+    roc_auc_scores = []
+    
+    for _ in range(loop_times):
+        y_true = []
+        y_score = []
         for i, data in enumerate(test_loader, 0): # Test for one batch
             img0, img1, label = data
-            #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
             output1, output2 = net(img0, img1)
-            loss = criterion(output1, output2, label)
-            loss_per_batch.append(loss.item())
-            pbar_test.set_description("test loss: {:.4f}".format(np.mean(loss_per_batch)))
-            pbar_test.update(1)
+            criterion(output1, output2, label)
 
-    return np.mean(loss_per_batch)
+            y_true.append(label)
+            y_score.append(criterion.distance.item())
+    
+        roc_auc_scores.append(roc_auc_score(y_true, y_score))
+
+    average_score = np.mean(roc_auc_scores)
+    print("The {}-time average performance on test set is {:.4f}".format(loop_times, average_score))
+    return average_score
 
 def data_loaders(model, train_dataset, valid_dataset, test_dataset):
     data_transform = transforms.Compose([
@@ -126,14 +132,14 @@ for model in grid_search['model']:
 
     for loss_func in grid_search['loss_func']:
         for lr in grid_search['lr']:
-            final_valid_loss, best_epoch = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, lr=lr)
+            best_valid_loss, best_epoch = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, lr=lr)
             
-            if final_valid_loss < best_config['best_valid_loss']:
+            if best_valid_loss < best_config['best_valid_loss']:
                 best_config['model'] = model
                 best_config['loss_func'] = loss_func
                 best_config['lr'] = lr
                 best_config['search_best'] = search_times
-                best_config['best_valid_loss'] = final_valid_loss
+                best_config['best_valid_loss'] = best_valid_loss
                 best_config['best_epoch'] = best_epoch
 
                 np.save('best_config.npy', best_config)
@@ -141,7 +147,7 @@ for model in grid_search['model']:
             print("\nGrid search {} is completed.\n".format(search_times))
             search_times += 1
 
-print("The best model is model {} with final valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
+print("The best model is model {} with best valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
 
 #best_net = type(best_config['model'])().cuda()
 best_net = type(best_config['model'])()
@@ -150,6 +156,6 @@ best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
 test_loss = evaluate(test_loader, best_net=best_net, loss_func=best_config['loss_func'])
 
-best_config['test_loss'] = test_loss
+best_config['performance'] = test_loss
 np.save('best_config.npy', best_config)
 read_dictionary = np.load('best_config.npy').item()
