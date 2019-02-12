@@ -6,3 +6,4 @@ class Config():
     train_number_epochs = 1
     train_batch_size = 100
     valid_batch_size = 1
+    evaluation_times = 5

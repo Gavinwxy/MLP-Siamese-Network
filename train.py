@@ -156,7 +156,7 @@ best_net = best_config['model']()
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
-roc_auc_score = evaluate(test_loader, 5, best_net=best_net, metric=best_config['metric'])
+roc_auc_score = evaluate(test_loader, Config.evaluation_times, best_net=best_net, metric=best_config['metric'])
 
 best_config['roc_auc_score'] = roc_auc_score
 np.save('best_config.npy', best_config)
