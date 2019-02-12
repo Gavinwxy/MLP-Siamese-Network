@@ -129,11 +129,10 @@ best_config['best_valid_loss'] = np.inf
 best_config['best_epoch'] = 1
 
 for model in grid_search['model']:
-    train_loader, valid_loader, _ = data_loaders(model, train_dataset, valid_dataset, test_dataset)
-
     for loss_func in grid_search['loss_func']:
         for metric in grid_search['metric']:
             for lr in grid_search['lr']:
+                train_loader, valid_loader, _ = data_loaders(model, train_dataset, valid_dataset, test_dataset)
                 best_valid_loss, best_epoch = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, metric=metric, lr=lr)
                 
                 if best_valid_loss < best_config['best_valid_loss']:
@@ -157,8 +156,8 @@ best_net = best_config['model']()
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
-test_loss = evaluate(test_loader, 5, best_net=best_net, metric=best_config['metric'])
+roc_auc_score = evaluate(test_loader, 5, best_net=best_net, metric=best_config['metric'])
 
-best_config['performance'] = test_loss
+best_config['roc_auc_score'] = roc_auc_score
 np.save('best_config.npy', best_config)
 read_dictionary = np.load('best_config.npy').item()
