@@ -14,10 +14,9 @@ class ContrastiveLoss(torch.nn.Module):
         self.margin = margin
 
     def forward(self, output1, output2, label):
-        #self.distance = F.pairwise_distance(output1, output2)
-        self.distance = self.metric(output1, output2)
-        loss_contrastive = torch.mean((1 - label) * torch.pow(self.distance, 2) +
-                                      (label) * torch.pow(torch.clamp(self.margin - self.distance, min=0.0), 2))
+        distance = self.metric(output1, output2)
+        loss_contrastive = torch.mean((1 - label) * torch.pow(distance, 2) +
+                                      (label) * torch.pow(torch.clamp(self.margin - distance, min=0.0), 2))
 
         return loss_contrastive
 
@@ -33,9 +32,8 @@ class ChopraLoss(torch.nn.Module):
         self.Q = Q
 
     def forward(self, output1, output2, label):
-        #self.distance = F.pairwise_distance(output1, output2)
-        self.distance = self.metric(output1, output2)
-        loss_chopra = torch.mean((1 - label) * (2 / self.Q) * torch.pow(self.distance, 2) +
-                                 (label) * (2 * self.Q) * torch.exp((-2.77 / self.Q) * self.distance))
+        distance = self.metric(output1, output2)
+        loss_chopra = torch.mean((1 - label) * (2 / self.Q) * torch.pow(distance, 2) +
+                                 (label) * (2 * self.Q) * torch.exp((-2.77 / self.Q) * distance))
 
         return loss_chopra
