@@ -106,7 +106,7 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
 
     train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Config.train_batch_size, shuffle=True)
     valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=Config.test_batch_size, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=1, shuffle=True)
 
     return train_loader, valid_loader, test_loader
 
