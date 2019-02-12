@@ -15,8 +15,9 @@ from functools import partial
 
 
 def train(train_loader, valid_loader, search_times, **param):
-    #net = param['model']().cuda()
     net = param['model']()
+    if torch.cuda.is_available():
+        net = net.cuda()
     criterion = param['loss_func'](metric=param['metric'])
     optimizer = optim.Adam(net.parameters(), lr=param['lr'])
 
@@ -32,7 +33,8 @@ def train(train_loader, valid_loader, search_times, **param):
         with tqdm.tqdm(total=num_batch_train) as pbar_train:
             for i, data in enumerate(train_loader, 0): # Train for one batch
                 img0, img1, label = data
-                #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+                if torch.cuda.is_available():
+                    img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
                 optimizer.zero_grad()
                 output1, output2 = net(img0, img1)
                 loss = criterion(output1, output2, label)
@@ -45,7 +47,8 @@ def train(train_loader, valid_loader, search_times, **param):
         with tqdm.tqdm(total=num_batch_valid) as pbar_valid:
             for i, data in enumerate(valid_loader, 0): # Evaluation for one batch
                 img0, img1, label = data
-                #img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+                if torch.cuda.is_available():
+                    img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
                 output1, output2 = net.forward(img0, img1)
                 loss = criterion(output1, output2, label)
                 loss_per_batch["valid_loss"].append(loss.item())
@@ -73,10 +76,10 @@ def evaluate(test_loader, loop_times, **param):
             for i, data in enumerate(test_loader, 0):
                 img0, img1, label = data
                 output1, output2 = net(img0, img1)
-                distance = metric(output1, output2).item()
+                distance = metric(output1, output2)
 
-                y_true.append(label)
-                y_score.append(distance)
+                y_true.append(label.item())
+                y_score.append(distance.item())
         
             roc_auc_scores.append(roc_auc_score(y_true, y_score))
             pbar_test.set_description("ROC_AUC score: {:.4f}".format(np.mean(roc_auc_scores)))
@@ -112,9 +115,9 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
 
 grid_search = {
     "model": [model.ChopraNet],
-    "loss_func": [loss.ChopraLoss],
+    "loss_func": [loss.ContrastiveLoss],
     "metric": [partial(F.pairwise_distance, p=2)],
-    "lr": [0.005]
+    "lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
 }
 
 train_dataset = datasets.ImageFolder(root=Config.train_dir)
@@ -151,8 +154,9 @@ for model in grid_search['model']:
 
 print("The best model is model {} with best valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
 
-#best_net = best_config['model']().cuda()
 best_net = best_config['model']()
+if torch.cuda.is_available():
+    best_net = best_net.cuda()
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
