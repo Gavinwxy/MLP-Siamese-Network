@@ -5,4 +5,5 @@ Investigate Siamese Network for Face Verification
 
 - [ ] Implement locally connected layer
 - [ ] GPU server configuration
-- [ ] Find appropriate optimizer, learning rate. 
+- [ ] Find appropriate optimizer, learning rate. (maybe with weight decay?)
+- [ ] test accuracy?
