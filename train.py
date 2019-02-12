@@ -15,7 +15,7 @@ from functools import partial
 
 
 def train(train_loader, valid_loader, search_times, **param):
-    #net = type(model)().cuda()
+    #net = param['model']().cuda()
     net = param['model']()
     criterion = param['loss_func'](metric=param['metric'])
     optimizer = optim.Adam(net.parameters(), lr=param['lr'])
@@ -153,7 +153,7 @@ for model in grid_search['model']:
 
 print("The best model is model {} with best valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
 
-#best_net = type(best_config['model'])().cuda()
+#best_net = best_config['model']().cuda()
 best_net = best_config['model']()
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 
