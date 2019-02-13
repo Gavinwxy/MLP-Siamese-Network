@@ -75,6 +75,8 @@ def evaluate(test_loader, loop_times, **param):
             y_score = []
             for i, data in enumerate(test_loader, 0):
                 img0, img1, label = data
+                if torch.cuda.is_available():
+                    img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
                 output1, output2 = net(img0, img1)
                 distance = metric(output1, output2)
 
