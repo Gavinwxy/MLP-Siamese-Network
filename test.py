@@ -1,41 +1,55 @@
+from functools import partial
+import torch
 from torch import optim
 from torchvision import datasets
+import torch.nn.functional as F
 import tqdm
 import numpy as np
+from sklearn.metrics import roc_auc_score
 
 import model
 import loss
-from utils import save_model, load_model, create_model, create_loss
+from utils import *
 from dataset import SiameseNetworkDataset, data_loaders
 from Config import Config
+from test_args import get_args
 
 
-def evaluate(test_loader, **param):
-    num_batch_test = len(test_loader)
-    loss_per_batch = []
+def evaluate(test_loader, loop_times):
+    roc_auc_scores = []
+    with tqdm.tqdm(total=loop_times) as pbar_test:
+        for _ in range(loop_times):
+            y_true = []
+            y_score = []
+            for i, data in enumerate(test_loader, 0):
+                img0, img1, label = data
+                img0, img1, label = img0.to(device), img1.to(device), label.to(device)
+                output1, output2 = model(img0, img1)
+                distance = metric(output1, output2)
+                y_true.append(label.item())
+                y_score.append(distance.item())
 
-    with tqdm.tqdm(total=num_batch_test) as pbar_test:
-        for i, data in enumerate(test_loader, 0):  # Test for one batch
-            img0, img1, label = data
-            # img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
-            output1, output2 = model(img0, img1)
-            loss = criterion(output1, output2, label)
-            loss.backward()
-            loss_per_batch.append(loss.item())
-            pbar_test.set_description("test loss: {:.4f}".format(np.mean(loss_per_batch)))
+            roc_auc_scores.append(roc_auc_score(y_true, y_score))
+            pbar_test.set_description("ROC_AUC score: {:.4f}".format(np.mean(roc_auc_scores)))
             pbar_test.update(1)
 
-    return np.mean(loss_per_batch)
+    return np.mean(roc_auc_scores)
 
 
+args = get_args()
 rng = np.random.RandomState(seed=2019)
 
-# wait to be implement (lack of reading best model and loss from model file)
-# call after all the models have trained
+device = torch.device('cpu')
+if torch.cuda.is_available():
+    device = torch.device('cuda')
 
-model = create_model(args.model)
-criterion = create_loss(args.loss)
-lr = args.lr
+local_param = get_local_param(args.exp_name)
+
+model = create_model(local_param.model)
+model = model.to(device)
+metric = partial(F.pairwise_distance, p=local_param.metric)
+error = create_loss(local_param.loss, metric=metric)
+lr = local_param.lr
 optimizer = optim.Adam(model.parameters(), lr=lr)
 
 train_dataset = datasets.ImageFolder(root=Config.train_dir)
@@ -43,4 +57,4 @@ valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
 test_dataset = datasets.ImageFolder(root=Config.test_dir)
 
 _, _, test_loader = data_loaders(model, train_dataset, valid_dataset, test_dataset)
-evaluate(test_loader)
+roc_auc_score = evaluate(test_loader, Config.evaluation_times)
