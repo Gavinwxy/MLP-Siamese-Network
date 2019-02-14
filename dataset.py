@@ -4,6 +4,7 @@ import random
 from PIL import Image
 import PIL.ImageOps
 import torch
+import os
 
 class SiameseNetworkDataset(Dataset):
 
@@ -13,19 +14,17 @@ class SiameseNetworkDataset(Dataset):
         self.should_invert = should_invert
 
     def __getitem__(self, index):
-        img0_tuple = random.choice(self.imageFolderDataset.imgs)
+        root = self.imageFolderDataset.root
+        label = random.choice(list(self.imageFolderDataset.class_to_idx.keys()))
+        path = os.path.join(root, label)
+        img0_tuple = os.path.join(path, random.choice(os.listdir(path))), self.imageFolderDataset.class_to_idx[label]
         # we need to make sure approx 50% of images are in the same class
         should_get_same_class = random.randint(0, 1)
         if should_get_same_class:
-            while True:
-                # keep looping till the same class image is found
-                img1_tuple = random.choice(self.imageFolderDataset.imgs)
-                if img0_tuple[1] == img1_tuple[1]:
-                    break
+            img1_tuple = os.path.join(path, random.choice(os.listdir(path))), self.imageFolderDataset.class_to_idx[label]
         else:
             while True:
                 # keep looping till a different class image is found
-
                 img1_tuple = random.choice(self.imageFolderDataset.imgs)
                 if img0_tuple[1] != img1_tuple[1]:
                     break
