@@ -62,10 +62,7 @@ def train(train_loader, valid_loader):
 args = get_args()
 rng = np.random.RandomState(seed=2019)
 
-device = torch.device('cpu')
-
-if torch.cuda.is_available():
-    device = torch.device('cuda')
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 model = create_model(args.model)
 model = model.to(device)
