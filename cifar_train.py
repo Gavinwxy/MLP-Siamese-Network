@@ -144,11 +144,11 @@ grid_search = {
     #"lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
     "lr": [0.005]
 }
-
+"""
 train_dataset = datasets.ImageFolder(root=Config.train_dir)
 valid_dataset = datasets.ImageFolder(root=Config.valid_dir)
 test_dataset = datasets.ImageFolder(root=Config.test_dir)
-
+"""
 search_times = 1
 # Dictionary that stores the best configuration:
 best_config = {key:None for key in grid_search.keys()}
