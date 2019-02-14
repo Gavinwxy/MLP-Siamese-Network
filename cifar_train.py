@@ -57,6 +57,7 @@ def train(train_loader, valid_loader, search_times, **param):
                 #img0, img1, label = data
                 #img0, img1, label = img0.to(device), img1.to(device), label.to(device)
                 inputs, label = data
+                label = (label == label)
                 img0, img1, label = inputs.to(device), inputs.to(device), label.to(device)
 
                 optimizer.zero_grad()
@@ -73,6 +74,7 @@ def train(train_loader, valid_loader, search_times, **param):
                 #img0, img1, label = data
                 #img0, img1, label = img0.to(device), img1.to(device), label.to(device)
                 inputs, label = data
+                label = (label == label)
                 img0, img1, label = inputs.to(device), inputs.to(device), label.to(device)
 
                 output1, output2 = net.forward(img0, img1)
