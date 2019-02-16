@@ -10,16 +10,20 @@ class DeepID(nn.Module):
         super(DeepID, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 20, kernel_size=4),
+            nn.BatchNorm2d(20),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
             nn.Conv2d(20, 40, kernel_size=3),
+            nn.BatchNorm2d(40),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2),
             nn.Conv2d(40, 60, kernel_size=3),
+            nn.BatchNorm2d(60),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
         self.conv2 = nn.Conv2d(60, 80, kernel_size=2)
+        self.bn = nn.BatchNorm1d(160)
         self.fc1 = nn.Linear(360, 160)
         self.fc2 = nn.Linear(160, 160)
 
@@ -31,7 +35,8 @@ class DeepID(nn.Module):
         out2 = out2.view(out2.shape[0], -1)
         out1 = self.fc1(out1) ## Fully connected 1
         out2 = self.fc2(out2) ## Fully connected 2
-        out = F.relu(torch.add(out1,out2)) # Element-wise sum with ReLU
+        out = self.bn(torch.add(out1,out2))
+        out = F.relu(out) # Element-wise sum with ReLU
         return out
 
     def forward(self, input1, input2):
