@@ -13,7 +13,7 @@ Investigate Siamese Network for Face Verification
 - [ ] Triplet loss
 ### Engineering Part
 - [x] GPU server configuration - Google Cloud Computing
-- [x] Test accuracy - AUC
+- [x] Test accuracy - ROC-AUC
 - [ ] Implement locally connected layer
 - [ ] Learning rate shceduler (Decrease with epoch)
 - [ ] Batch normalization
