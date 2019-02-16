@@ -1,9 +1,10 @@
 class Config():
-    train_dir = "./SampleData/train"
-    valid_dir = "./SampleData/valid"
-    test_dir = "./SampleData/test"
+    train_dir = "/Users/yantiz/Downloads/Extracted_Base/train"
+    valid_dir = "/Users/yantiz/Downloads/Extracted_Base/valid"
+    test_dir = "/Users/yantiz/Downloads/Extracted_Base/test"
     saved_models_dir = "./saved_models"
-    train_number_epochs = 100
-    train_batch_size = 1000
-    valid_batch_size = 1000
+    num_workers = 4
+    train_number_epochs = 10
+    train_batch_size = 100
+    valid_batch_size = 100
     evaluation_times = 5

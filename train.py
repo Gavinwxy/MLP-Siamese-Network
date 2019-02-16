@@ -64,6 +64,8 @@ def train(train_loader, valid_loader, search_times, **param):
     return np.min(loss_per_epoch['valid_loss']), best_epoch
 
 def evaluate(test_loader, loop_times, **param):
+    global device
+
     net = param['best_net'].to(device)
     metric = param['metric']
 
@@ -106,9 +108,9 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
                                                  transform=data_transform,
                                                  should_invert=False)
 
-    train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Config.train_batch_size, shuffle=True)
-    valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=1, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Config.train_batch_size, shuffle=True, num_workers=Config.num_workers)
+    valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True, num_workers=Config.num_workers)
+    test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=1, shuffle=True, num_workers=Config.num_workers)
 
     return train_loader, valid_loader, test_loader
 
