@@ -33,14 +33,14 @@ class DeepID(nn.Module):
         out2 = F.relu(self.conv2(out1))
         out1 = out1.view(out1.shape[0], -1)
         out2 = out2.view(out2.shape[0], -1)
-        out1 = self.fc1(out1) ## Fully connected 1
-        out2 = self.fc2(out2) ## Fully connected 2
-        out = self.bn(torch.add(out1,out2))
-        out = F.relu(out) # Element-wise sum with ReLU
+        out1 = self.fc1(out1)  ## Fully connected 1
+        out2 = self.fc2(out2)  ## Fully connected 2
+        out = self.bn(torch.add(out1, out2))
+        out = F.relu(out)  # Element-wise sum with ReLU
         return out
 
     def forward(self, input1, input2):
-        output1 = self.forward_once(input1) 
+        output1 = self.forward_once(input1)
         output2 = self.forward_once(input2)
         return output1, output2
 
@@ -77,7 +77,7 @@ class ChopraNet(nn.Module):
         # concatenate tensors
         x = torch.cat(xs, 1)
         # Mimic partial connection
-        x = F.dropout(x, 0.707)
+        # x = F.dropout(x, 0.707)
         x = self.conv2(x)
         #
         x = self.avgpool2(x)
@@ -87,6 +87,34 @@ class ChopraNet(nn.Module):
             xs[i] = torch.sigmoid(self.convs2[i](xs[i]))
         x = torch.cat(xs, 1)
         x = self.conv3(x)
+        x = x.view(-1, 250 * 1 * 1)
+        x = self.fc1(x)
+        return x
+
+    def forward(self, input1, input2):
+        output1 = self.forward_once(input1)
+        output2 = self.forward_once(input2)
+        return output1, output2
+
+
+class ChopraNet2(nn.Module):
+    input_size = (56, 46)
+
+    def __init__(self):
+        super(ChopraNet2, self).__init__()
+        self.conv1 = nn.Conv2d(1, 15, 7)
+        self.maxpool1 = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(15, 45, 6)
+        self.maxpool2 = nn.MaxPool2d((4, 3), (4, 3))
+        self.conv3 = nn.Conv2d(45, 250, 5)
+        self.fc1 = nn.Linear(250, 50)
+
+    def forward_once(self, x):
+        x = F.relu(self.conv1(x))
+        x = self.maxpool1(x)
+        x = F.relu(self.conv2(x))
+        x = self.maxpool2(x)
+        x = F.relu(self.conv3(x))
         x = x.view(-1, 250 * 1 * 1)
         x = self.fc1(x)
         return x
