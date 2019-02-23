@@ -161,6 +161,7 @@ print("The best model is model {} with best valid loss {:.4f}".format(best_confi
 
 best_net = best_config['model']().to(device)
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
+best_net.eval()
 
 _, _, test_loader = data_loaders(best_net, train_dataset, valid_dataset, test_dataset)
 roc_auc_score = evaluate(test_loader, Config.evaluation_times, best_net=best_net, metric=best_config['metric'])
