@@ -17,11 +17,16 @@ class SiameseNetworkDataset(Dataset):
         root = self.imageFolderDataset.root
         label = random.choice(list(self.imageFolderDataset.class_to_idx.keys()))
         path = os.path.join(root, label)
-        img0_tuple = os.path.join(path, random.choice(os.listdir(path))), self.imageFolderDataset.class_to_idx[label]
+        img0_name = random.choice(os.listdir(path))
+        img0_tuple = os.path.join(path, img0_name), self.imageFolderDataset.class_to_idx[label]
         # we need to make sure approx 50% of images are in the same class
         should_get_same_class = random.randint(0, 1)
         if should_get_same_class:
-            img1_tuple = os.path.join(path, random.choice(os.listdir(path))), self.imageFolderDataset.class_to_idx[label]
+            num_imgs = len(os.listdir(path))
+            img1_name = random.choice(os.listdir(path))
+            while img0_name == img1_name and num_imgs > 1:
+                img1_name = random.choice(os.listdir(path))
+            img1_tuple = os.path.join(path, img1_name), self.imageFolderDataset.class_to_idx[label]
         else:
             while True:
                 # keep looping till a different class image is found
