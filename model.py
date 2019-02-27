@@ -22,15 +22,16 @@ class DeepID(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
-        self.conv2 = nn.Conv2d(60, 80, kernel_size=2)
+        # Convolutional Layer 4: Totally unshared
+        self.local2d = nn.Conv2dLocal(in_channels=60, out_channels=80, in_height=3, in_width=2, kernel_size=2, stride=1, padding=0)
         self.bn = nn.BatchNorm1d(160)
         self.fc1 = nn.Linear(360, 160)
         self.fc2 = nn.Linear(160, 160)
 
     def forward_once(self, x):
-        ### Locally connected layers needed here !!!
+        ### Locally connected layers implemented!
         out1 = self.conv1(x)
-        out2 = F.relu(self.conv2(out1))
+        out2 = F.relu(self.local2d(out1))
         out1 = out1.view(out1.shape[0], -1)
         out2 = out2.view(out2.shape[0], -1)
         out1 = self.fc1(out1) ## Fully connected 1
