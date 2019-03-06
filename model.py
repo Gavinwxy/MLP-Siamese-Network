@@ -79,7 +79,6 @@ class ChopraNet(nn.Module):
         # concatenate tensors
         x = torch.cat(xs, 1)
         # Mimic partial connection
-        # x = F.dropout(x, 0.707)
         x = self.conv2(x)
         #
         x = self.avgpool2(x)
