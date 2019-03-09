@@ -5,18 +5,19 @@ Investigate Siamese Network for Face Verification
 ### CNN Backbone 
 - [x] ChopraNet (Baseline)
 - [x] DeepID v1 
-- [ ] DeepFace 
+- [x] DeepFace 
 - [ ] FaceNet 
-- [ ] ResNet 
+- [ ] ResNet50
+- [ ] Xception 
 ### Loss Function
 - [x] Contrastive loss
 - [ ] Triplet loss
 ### Engineering Part
 - [x] GPU server configuration - Google Cloud Computing
 - [x] Test accuracy - ROC-AUC
-- [ ] Implement locally connected layer
+- [x] Implement locally connected layer
 - [ ] Learning rate shceduler (Decrease with epoch)
-- [ ] Batch normalization
+- [x] Batch normalization
 - [ ] Data augmentation (rotation, jittering,...)
 
 ## Issues
