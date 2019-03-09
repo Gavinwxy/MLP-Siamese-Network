@@ -3,11 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class DeepID_constrastive(nn.Module):
+class DeepID_contrastive(nn.Module):
     input_size = (39, 31)
 
     def __init__(self):
-        super(DeepID_constrastive, self).__init__()
+        super(DeepID_contrastive, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 20, kernel_size=4),
             nn.BatchNorm2d(20),
@@ -200,3 +200,4 @@ class DeepFace(nn.Module):
         output1 = self.forward_once(input1)
         output2 = self.forward_once(input2)
         return output1, output2
+
