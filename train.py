@@ -5,7 +5,7 @@ import torch
 from torch import optim
 from torchvision import transforms, datasets
 from torch.autograd import Variable
-from dataset import SiameseNetworkDataset
+from dataset import SiameseNetworkDataset, TripletDataset
 from Config import Config
 import tqdm
 import numpy as np
@@ -13,6 +13,7 @@ from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
 from functools import partial
 
+torch.manual_seed(0)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train(train_loader, valid_loader, search_times, **param):
@@ -35,11 +36,19 @@ def train(train_loader, valid_loader, search_times, **param):
 
         with tqdm.tqdm(total=num_batch_train) as pbar_train:
             for i, data in enumerate(train_loader, 0): # Train for one batch
+                """
                 img0, img1, label = data
                 img0, img1, label = img0.to(device), img1.to(device), label.to(device)
                 optimizer.zero_grad()
                 output1, output2 = net(img0, img1)
                 loss = criterion(output1, output2, label)
+                """
+                img0, img1, img2 = data
+                img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
+                optimizer.zero_grad()
+                output1, output2 = net(img0, img1)
+                output2, output3 = net(img1, img2)
+                loss = criterion(output1, output2, output3)
                 loss.backward()
                 optimizer.step()
                 loss_per_batch["train_loss"].append(loss.item())
@@ -48,10 +57,17 @@ def train(train_loader, valid_loader, search_times, **param):
 
         with tqdm.tqdm(total=num_batch_valid) as pbar_valid:
             for i, data in enumerate(valid_loader, 0): # Evaluation for one batch
+                """
                 img0, img1, label = data
                 img0, img1, label = img0.to(device), img1.to(device), label.to(device)
                 output1, output2 = net.forward(img0, img1)
                 loss = criterion(output1, output2, label)
+                """
+                img0, img1, img2 = data
+                img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
+                output1, output2 = net.forward(img0, img1)
+                output2, output3 = net.forward(img1, img2)
+                loss = criterion(output1, output2, output3)
                 loss_per_batch["valid_loss"].append(loss.item())
                 pbar_valid.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
                 pbar_valid.update(1)
@@ -77,6 +93,7 @@ def evaluate(test_loader, loop_times, **param):
             y_true = []
             y_score = []
             for i, data in enumerate(test_loader, 0):
+                """
                 img0, img1, label = data
                 img0, img1, label = img0.to(device), img1.to(device), label.to(device)
                 output1, output2 = net(img0, img1)
@@ -84,7 +101,19 @@ def evaluate(test_loader, loop_times, **param):
 
                 y_true.append(label.item())
                 y_score.append(distance.item())
-        
+                """
+                img0, img1, img2 = data
+                img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
+                output1, output2 = net(img0, img1)
+                output2, output3 = net(img1, img2)
+                distance1 = metric(output1, output2)
+                distance2 = metric(output2, output3)
+
+                y_true.append(0) 
+                y_score.append(distance1.item())
+                y_true.append(1)
+                y_score.append(distance2.item())
+                        
             roc_auc_scores.append(roc_auc_score(y_true, y_score))
             pbar_test.set_description("ROC_AUC score: {:.4f}".format(np.mean(roc_auc_scores)))
             pbar_test.update(1)
@@ -98,28 +127,47 @@ def data_loaders(model, train_dataset, valid_dataset, test_dataset):
         transforms.ToTensor()
     ])
 
+    """
     siamese_train_dataset = SiameseNetworkDataset(imageFolderDataset=train_dataset,
                                                   transform=data_transform,
-                                                  should_invert=False)
+                                                  grayscale=True)
 
     siamese_valid_dataset = SiameseNetworkDataset(imageFolderDataset=valid_dataset,
                                                   transform=data_transform,
-                                                  should_invert=False)
+                                                  grayscale=True)
 
     siamese_test_dataset = SiameseNetworkDataset(imageFolderDataset=test_dataset,
                                                  transform=data_transform,
-                                                 should_invert=False)
+                                                 grayscale=True)
+    """
+    triplet_train_dataset = TripletDataset(imageFolderDataset=train_dataset,
+                                                  transform=data_transform,
+                                                  grayscale=True)
 
+    triplet_valid_dataset = TripletDataset(imageFolderDataset=valid_dataset,
+                                                  transform=data_transform,
+                                                  grayscale=True)
+
+    triplet_test_dataset = TripletDataset(imageFolderDataset=test_dataset,
+                                                 transform=data_transform,
+                                                 grayscale=True) 
+
+    """
     train_loader = torch.utils.data.DataLoader(siamese_train_dataset, batch_size=Config.train_batch_size, shuffle=True, num_workers=Config.num_workers)
     valid_loader = torch.utils.data.DataLoader(siamese_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True, num_workers=Config.num_workers)
     test_loader = torch.utils.data.DataLoader(siamese_test_dataset, batch_size=1, shuffle=True, num_workers=Config.num_workers)
+    """
+    train_loader = torch.utils.data.DataLoader(triplet_train_dataset, batch_size=Config.train_batch_size, shuffle=True, num_workers=Config.num_workers)
+    valid_loader = torch.utils.data.DataLoader(triplet_valid_dataset, batch_size=Config.valid_batch_size, shuffle=True, num_workers=Config.num_workers)
+    test_loader = torch.utils.data.DataLoader(triplet_test_dataset, batch_size=1, shuffle=True, num_workers=Config.num_workers)
 
     return train_loader, valid_loader, test_loader
 
 
 grid_search = {
     "model": [model.DeepID],
-    "loss_func": [loss.ContrastiveLoss],
+    #"loss_func": [loss.ContrastiveLoss],
+    "loss_func": [loss.TripletLoss],
     "metric": [partial(F.pairwise_distance, p=2)],
     #"lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
     "lr": [0.005]
