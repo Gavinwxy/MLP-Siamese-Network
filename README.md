@@ -7,11 +7,11 @@ Investigate Siamese Network for Face Verification
 - [x] DeepID v1 
 - [x] DeepFace 
 - [ ] FaceNet 
-- [ ] ResNet50
-- [ ] Xception 
+- [x] ResNet50 https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
+- [x] Xception https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/xception.py
 ### Loss Function
 - [x] Contrastive loss
-- [ ] Triplet loss
+- [x] Triplet loss
 ### Engineering Part
 - [x] GPU server configuration - Google Cloud Computing
 - [x] Test accuracy - ROC-AUC
