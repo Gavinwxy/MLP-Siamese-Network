@@ -113,8 +113,8 @@ class DeepFace(nn.Module):
 
     def __init__(self):
         super(DeepFace, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 11)
-        self.pool1 = nn.MaxPool2d(3, 2)
+        self.conv1 = nn.Conv2d(3, 32, 11)
+        self.pool1 = nn.MaxPool2d(3, 2, 1)
         self.conv2 = nn.Conv2d(32, 16, 9)
         self.localconv1 = nn.Conv2dLocal(in_channels=16, out_channels=16, in_height=63, in_width=63, kernel_size=9,
                                          stride=1, padding=0)
