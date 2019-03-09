@@ -110,31 +110,33 @@ def evaluate(test_loader, loop_times, **param):
 
 def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
     data_transform = transforms.Compose([
-        transforms.Resize(model.input_size),
+        transforms.Resize(model.input_size[1:]),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor()
     ])
 
+    grayscale = model.input_size[0] != 3
+
     if loss_func.__name__ != 'TripletLoss':
         train_dataset = SiameseNetworkDataset(imageFolderDataset=train_dataset,
                                                     transform=data_transform,
-                                                    grayscale=True)
+                                                    grayscale=grayscale)
 
         valid_dataset = SiameseNetworkDataset(imageFolderDataset=valid_dataset,
                                                     transform=data_transform,
-                                                    grayscale=True)
+                                                    grayscale=grayscale)
     else:
         train_dataset = TripletDataset(imageFolderDataset=train_dataset,
                                                     transform=data_transform,
-                                                    grayscale=True)
+                                                    grayscale=grayscale)
 
         valid_dataset = TripletDataset(imageFolderDataset=valid_dataset,
                                                     transform=data_transform,
-                                                    grayscale=True)
+                                                    grayscale=grayscale)
 
     test_dataset = SiameseNetworkDataset(imageFolderDataset=test_dataset,
                                                     transform=data_transform,
-                                                    grayscale=True)
+                                                    grayscale=grayscale)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=Config.train_batch_size, shuffle=True, num_workers=Config.num_workers)
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=Config.valid_batch_size, shuffle=True, num_workers=Config.num_workers)
@@ -144,7 +146,7 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model.DeepID],
+    "model": [model.DeepFace],
     #"loss_func": [loss.ContrastiveLoss],
     "loss_func": [loss.TripletLoss],
     "metric": [partial(F.pairwise_distance, p=2)],

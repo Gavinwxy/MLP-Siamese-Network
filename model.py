@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class DeepID(nn.Module):
-    input_size = (39, 31)
+    input_size = (1, 39, 31)
 
     def __init__(self):
         super(DeepID, self).__init__()
@@ -42,7 +42,7 @@ class DeepID(nn.Module):
         return out
 
 class ChopraNet(nn.Module):
-    input_size = (56, 46)
+    input_size = (1, 56, 46)
 
     def __init__(self):
         super(ChopraNet, self).__init__()
@@ -87,7 +87,7 @@ class ChopraNet(nn.Module):
         return x
 
 class ChopraNet2(nn.Module):
-    input_size = (56, 46)
+    input_size = (1, 56, 46)
 
     def __init__(self):
         super(ChopraNet2, self).__init__()
@@ -109,7 +109,7 @@ class ChopraNet2(nn.Module):
         return x
 
 class DeepFace(nn.Module):
-    input_size = (152, 152)  # actually 3*152*152
+    input_size = (3, 152, 152)
 
     def __init__(self):
         super(DeepFace, self).__init__()
