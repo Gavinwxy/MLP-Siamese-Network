@@ -22,7 +22,7 @@ class ContrastiveLoss(torch.nn.Module):
 
 class TripletLoss(torch.nn.Module):
     """
-    Based on https://arxiv.org/pdf/1503.03832.pdf
+    Based on: https://arxiv.org/pdf/1503.03832.pdf
     """
 
     def __init__(self, metric, margin=2.0):

@@ -86,7 +86,6 @@ class ChopraNet(nn.Module):
         x = self.fc1(x)
         return x
 
-
 class ChopraNet2(nn.Module):
     input_size = (56, 46)
 
@@ -99,7 +98,7 @@ class ChopraNet2(nn.Module):
         self.conv3 = nn.Conv2d(45, 250, 5)
         self.fc1 = nn.Linear(250, 50)
 
-    def forward_once(self, x):
+    def forward(self, x):
         x = F.relu(self.conv1(x))
         x = self.maxpool1(x)
         x = F.relu(self.conv2(x))
@@ -108,12 +107,6 @@ class ChopraNet2(nn.Module):
         x = x.view(-1, 250 * 1 * 1)
         x = self.fc1(x)
         return x
-
-    def forward(self, input1, input2):
-        output1 = self.forward_once(input1)
-        output2 = self.forward_once(input2)
-        return output1, output2
-
 
 class DeepFace(nn.Module):
     input_size = (152, 152)  # actually 3*152*152
@@ -141,4 +134,3 @@ class DeepFace(nn.Module):
         x = x.view(-1, 16 * 21 * 21)
         x = self.fc1(x)
         return x
-
