@@ -7,8 +7,7 @@ class DeepID_constrastive(nn.Module):
     input_size = (39, 31)
 
     def __init__(self):
-        super(DeepID, self).__init__()
-        self.loss = loss
+        super(DeepID_constrastive, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 20, kernel_size=4),
             nn.BatchNorm2d(20),
@@ -51,8 +50,7 @@ class DeepID_triplet(nn.Module):
     input_size = (39, 31)
 
     def __init__(self):
-        super(DeepID, self).__init__()
-        self.loss = loss
+        super(DeepID_triplet, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 20, kernel_size=4),
             nn.BatchNorm2d(20),
