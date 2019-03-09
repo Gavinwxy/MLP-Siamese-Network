@@ -3,11 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class DeepID_contrastive(nn.Module):
+class DeepID(nn.Module):
     input_size = (39, 31)
 
     def __init__(self):
-        super(DeepID_contrastive, self).__init__()
+        super(DeepID, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 20, kernel_size=4),
             nn.BatchNorm2d(20),
@@ -29,7 +29,7 @@ class DeepID_contrastive(nn.Module):
         self.fc1 = nn.Linear(360, 160)
         self.fc2 = nn.Linear(160, 160)
 
-    def forward_once(self, x):
+    def forward(self, x):
         ### Locally connected layers implemented!
         out1 = self.conv1(x)
         out2 = F.relu(self.local2d(out1))
@@ -40,55 +40,6 @@ class DeepID_contrastive(nn.Module):
         out = self.bn(torch.add(out1, out2))
         out = F.relu(out)  # Element-wise sum with ReLU
         return out
-
-    def forward(self, input1, input2):
-        output1 = self.forward_once(input1)
-        output2 = self.forward_once(input2)
-        return output1, output2
-
-class DeepID_triplet(nn.Module):
-    input_size = (39, 31)
-
-    def __init__(self):
-        super(DeepID_triplet, self).__init__()
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(1, 20, kernel_size=4),
-            nn.BatchNorm2d(20),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(20, 40, kernel_size=3),
-            nn.BatchNorm2d(40),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(40, 60, kernel_size=3),
-            nn.BatchNorm2d(60),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2)
-        )
-        # Convolutional Layer 4: Totally unshared
-        self.local2d = nn.Conv2dLocal(in_channels=60, out_channels=80, in_height=3, in_width=2, kernel_size=2, stride=1, padding=0)
-        self.bn = nn.BatchNorm1d(160)
-        self.fc1 = nn.Linear(360, 160)
-        self.fc2 = nn.Linear(160, 160)
-
-    def forward_once(self, x):
-        ### Locally connected layers implemented!
-        out1 = self.conv1(x)
-        out2 = F.relu(self.local2d(out1))
-        out1 = out1.view(out1.shape[0], -1)
-        out2 = out2.view(out2.shape[0], -1)
-        out1 = self.fc1(out1)  ## Fully connected 1
-        out2 = self.fc2(out2)  ## Fully connected 2
-        out = self.bn(torch.add(out1, out2))
-        out = F.relu(out)  # Element-wise sum with ReLU
-        return out
-
-    def forward(self, input1, input2, input3):
-        output1 = self.forward_once(input1)
-        output2 = self.forward_once(input2)
-        output3 = self.forward_once(input3)
-        return output1, output2, output3
-
 
 class ChopraNet(nn.Module):
     input_size = (56, 46)
@@ -111,7 +62,7 @@ class ChopraNet(nn.Module):
         # Fully-connected layer
         self.fc1 = nn.Linear(250, 50)
 
-    def forward_once(self, x):
+    def forward(self, x):
         x = self.conv1(x)
         x = self.avgpool1(x)
         # decouple channels
@@ -134,11 +85,6 @@ class ChopraNet(nn.Module):
         x = x.view(-1, 250 * 1 * 1)
         x = self.fc1(x)
         return x
-
-    def forward(self, input1, input2):
-        output1 = self.forward_once(input1)
-        output2 = self.forward_once(input2)
-        return output1, output2
 
 
 class ChopraNet2(nn.Module):
@@ -185,7 +131,7 @@ class DeepFace(nn.Module):
                                          stride=1, padding=0)
         self.fc1 = nn.Linear(16*21*21, 4096)    # input dim here?
 
-    def forward_once(self, x):
+    def forward(self, x):
         x = F.relu(self.conv1(x))
         x = self.pool1(x)
         x = F.relu(self.conv2(x))
@@ -195,9 +141,4 @@ class DeepFace(nn.Module):
         x = x.view(-1, 16 * 21 * 21)
         x = self.fc1(x)
         return x
-
-    def forward(self, input1, input2):
-        output1 = self.forward_once(input1)
-        output2 = self.forward_once(input2)
-        return output1, output2
 

@@ -168,16 +168,10 @@ class Xception(nn.Module):
         x = self.last_linear(x)
         return x
 
-    def forward_once(self, input):
+    def forward(self, input):
         x = self.features(input)
         x = self.logits(x)
         return x
-    
-    def foward(self, input1, input2):
-        output1 = self.forward_once(input1)
-        output2 = self.forward_once(input2)
-        return output1, output2
-
 
 def xception(num_classes=1000):
     model = Xception(num_classes=num_classes)

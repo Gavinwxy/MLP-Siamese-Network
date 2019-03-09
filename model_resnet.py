@@ -136,7 +136,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward_once(self, x):
+    def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -152,12 +152,6 @@ class ResNet(nn.Module):
         x = self.fc(x)
 
         return x
-    
-    def forward(self, input1, input2):
-         output1 = self.forward_once(input1)
-         output2 = self.forward_once(input2)
-
-         return output1, output2
 
 
 def resnet50():
