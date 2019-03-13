@@ -13,6 +13,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
 from functools import partial
+from copy import deepcopy
 
 seed = 0
 random.seed(seed)
@@ -22,7 +23,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def train(train_loader, valid_loader, search_times, **param):
     global device
 
-    net = param['model']().to(device)
+    net = deepcopy(param['model']).to(device)
     criterion = param['loss_func'](metric=param['metric'])
     optimizer = optim.Adam(net.parameters(), lr=param['lr'])
     ################# Learning Rate Scheduler #######
@@ -85,7 +86,7 @@ def train(train_loader, valid_loader, search_times, **param):
 def evaluate(test_loader, loop_times, **param):
     global device
 
-    net = param['best_net'].to(device)
+    net = deepcopy(param['best_net']).to(device)
     metric = param['metric']
 
     roc_auc_scores = []
@@ -146,7 +147,7 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model.DeepFace],
+    "model": [model.DeepID()],
     #"loss_func": [loss.ContrastiveLoss],
     "loss_func": [loss.TripletLoss],
     "metric": [partial(F.pairwise_distance, p=2)],
@@ -188,7 +189,7 @@ for model in grid_search['model']:
 
 print("The best model is model {} with best valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
 
-best_net = best_config['model']().to(device)
+best_net = deepcopy(best_config['model']).to(device)
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 best_net.eval()
 
