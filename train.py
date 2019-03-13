@@ -26,7 +26,7 @@ def train(train_loader, valid_loader, search_times, **param):
     net = deepcopy(param['model']).to(device)
     criterion = param['loss_func'](metric=param['metric'])
     optimizer = optim.Adam(net.parameters(), lr=param['lr'])
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, Config.train_number_epochs) 
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, Config.train_number_epochs) 
     loss_per_epoch = {"train_loss": [], "valid_loss": []}
     num_batch_train = len(train_loader)
     num_batch_valid = len(valid_loader)
