@@ -26,9 +26,7 @@ def train(train_loader, valid_loader, search_times, **param):
     net = deepcopy(param['model']).to(device)
     criterion = param['loss_func'](metric=param['metric'])
     optimizer = optim.Adam(net.parameters(), lr=param['lr'])
-    ################# Learning Rate Scheduler #######
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1) 
-    #################################################
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, Config.train_number_epochs) 
     loss_per_epoch = {"train_loss": [], "valid_loss": []}
     num_batch_train = len(train_loader)
     num_batch_valid = len(valid_loader)
@@ -54,6 +52,7 @@ def train(train_loader, valid_loader, search_times, **param):
                     loss = criterion(output1, output2, output3)
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
                 loss_per_batch["train_loss"].append(loss.item())
                 pbar_train.set_description("train loss: {:.4f}".format(np.mean(loss_per_batch['train_loss'])))
                 pbar_train.update(1)

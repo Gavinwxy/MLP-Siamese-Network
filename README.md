@@ -10,21 +10,23 @@ Investigate Siamese Network for Face Verification
 - [x] ResNet50 https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
 - [x] Xception https://github.com/Cadene/pretrained-models.pytorch/blob/master/pretrainedmodels/models/xception.py
 ### Loss Function
-- [x] Contrastive loss
-- [x] Triplet loss
+- [x] Contrastive Loss
+- [x] Triplet Loss
+- [ ] ArcFace Loss
+- [ ] Angular Softmax Loss
 ### Engineering Part
 - [x] GPU server configuration - Google Cloud Computing
-- [x] Test accuracy - ROC-AUC
+- [x] Evaluation Metric - ROC-AUC
 - [x] Implement locally connected layer
-- [ ] Learning rate shceduler (Decrease with epoch)
+- [x] Learning rate shceduler (Cosine Annealing)
 - [x] Batch normalization
-- [ ] Data augmentation (rotation, jittering,...)
+- [x] Data augmentation (Random Horizontal Flip)
 
 ## Issues
--  GPU dose not computing in training session
+-  GPU does not computing in training session
 -  We found data loader may become the bottleneck in the training
 -  Official data loader of Cifar10 is tested on our model. Significant difference on speed can be observed between using GPU and not, indicating server GPU functions well
 
 **2/15/2019**
 
-- Noticed SSD and multi-thread data loader may accelerate the training process. 
+- Noticed SSD and multi-threaded data loader may accelerate the training process. 
