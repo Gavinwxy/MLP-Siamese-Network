@@ -25,9 +25,10 @@ class DeepID(nn.Module):
         # Convolutional Layer 4: Totally unshared
         self.local2d = nn.Conv2dLocal(in_channels=60, out_channels=80, in_height=3, in_width=2, kernel_size=2, stride=1,
                                       padding=0)
-        self.bn = nn.BatchNorm1d(160)
         self.fc1 = nn.Linear(360, 160)
         self.fc2 = nn.Linear(160, 160)
+        self.bn = nn.BatchNorm1d(160)
+        self.metric_layer = nn.Linear(160, 2)
 
     def forward(self, x):
         ### Locally connected layers implemented!
@@ -39,6 +40,11 @@ class DeepID(nn.Module):
         out2 = self.fc2(out2)  ## Fully connected 2
         out = self.bn(torch.add(out1, out2))
         out = F.relu(out)  # Element-wise sum with ReLU
+        return out
+    
+    def forward_metric_learning(self, x1, x2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        out = self.metric_layer((out1 - out2).abs()) 
         return out
 
 class ChopraNet(nn.Module):
@@ -61,6 +67,7 @@ class ChopraNet(nn.Module):
         self.conv3 = nn.Conv2d(45, 250, 5)
         # Fully-connected layer
         self.fc1 = nn.Linear(250, 50)
+        self.metric_layer = nn.Linear(50, 2)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -85,28 +92,11 @@ class ChopraNet(nn.Module):
         x = x.view(-1, 250 * 1 * 1)
         x = self.fc1(x)
         return x
-
-class ChopraNet2(nn.Module):
-    input_size = (1, 56, 46)
-
-    def __init__(self):
-        super(ChopraNet2, self).__init__()
-        self.conv1 = nn.Conv2d(1, 15, 7)
-        self.maxpool1 = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(15, 45, 6)
-        self.maxpool2 = nn.MaxPool2d((4, 3), (4, 3))
-        self.conv3 = nn.Conv2d(45, 250, 5)
-        self.fc1 = nn.Linear(250, 50)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.maxpool1(x)
-        x = F.relu(self.conv2(x))
-        x = self.maxpool2(x)
-        x = F.relu(self.conv3(x))
-        x = x.view(-1, 250 * 1 * 1)
-        x = self.fc1(x)
-        return x
+    
+    def forward_metric_learning(self, x1, x2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        out = self.metric_layer((out1 - out2).abs()) 
+        return out
 
 class DeepFace(nn.Module):
     input_size = (3, 152, 152)
@@ -123,6 +113,7 @@ class DeepFace(nn.Module):
         self.localconv3 = nn.Conv2dLocal(in_channels=16, out_channels=16, in_height=25, in_width=25, kernel_size=5,
                                          stride=1, padding=0)
         self.fc1 = nn.Linear(16*21*21, 4096)    # input dim here?
+        self.metric_layer = nn.Linear(4096, 2)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -134,3 +125,8 @@ class DeepFace(nn.Module):
         x = x.view(-1, 16 * 21 * 21)
         x = self.fc1(x)
         return x
+
+    def forward_metric_learning(self, x1, x2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        out = self.metric_layer((out1 - out2).abs()) 
+        return out

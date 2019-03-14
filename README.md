@@ -12,8 +12,7 @@ Investigate Siamese Network for Face Verification
 ### Loss Function
 - [x] Contrastive Loss
 - [x] Triplet Loss
-- [ ] ArcFace Loss
-- [ ] Angular Softmax Loss
+- [x] Manhattan Distance Metric with Learnable Parameters and Cross Entropy Loss
 ### Engineering Part
 - [x] GPU server configuration - Google Cloud Computing
 - [x] Evaluation Metric - ROC-AUC

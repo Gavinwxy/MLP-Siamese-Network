@@ -1,8 +1,9 @@
 import os
 import random
-import model
+import model_metric_layer as model
 import loss
 import torch
+import torch.nn as nn
 from torch import optim
 from torchvision import transforms, datasets
 from torch.autograd import Variable
@@ -24,7 +25,10 @@ def train(train_loader, valid_loader, search_times, **param):
     global device
 
     net = deepcopy(param['model']).to(device)
-    criterion = param['loss_func'](metric=param['metric'])
+    if param['loss_func'].__name__ == 'CrossEntropyLoss':
+        criterion = param['loss_func']()
+    else:
+        criterion = param['loss_func'](metric=param['metric'])
     optimizer = optim.Adam(net.parameters(), lr=param['lr'])
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, Config.train_number_epochs) 
     loss_per_epoch = {"train_loss": [], "valid_loss": []}
@@ -37,19 +41,23 @@ def train(train_loader, valid_loader, search_times, **param):
         print("Epoch number: %d" % (epoch+1))
 
         with tqdm.tqdm(total=num_batch_train) as pbar_train:
-            for i, data in enumerate(train_loader, 0): # Train for one batch
-                if criterion.__class__.__name__ != 'TripletLoss':
-                    img0, img1, label = data
-                    img0, img1, label = img0.to(device), img1.to(device), label.to(device)
-                    optimizer.zero_grad()
-                    output1, output2 = net(img0), net(img1)
-                    loss = criterion(output1, output2, label)
-                else:
+            for _, data in enumerate(train_loader, 0): # Train for one batch
+                if criterion.__class__.__name__ == 'TripletLoss':
                     img0, img1, img2 = data
                     img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
-                    optimizer.zero_grad()
                     output1, output2, output3 = net(img0), net(img1), net(img2)
                     loss = criterion(output1, output2, output3)
+                elif criterion.__class__.__name__ == 'CrossEntropyLoss':
+                    img0, img1, label = data
+                    img0, img1, label = img0.to(device), img1.to(device), label.to(device)
+                    output = net.forward_metric_learning(img0, img1)
+                    loss = criterion(output, label.view(label.shape[0]).long())
+                else:
+                    img0, img1, label = data
+                    img0, img1, label = img0.to(device), img1.to(device), label.to(device)
+                    output1, output2 = net(img0), net(img1)
+                    loss = criterion(output1, output2, label)
+                optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
@@ -58,17 +66,22 @@ def train(train_loader, valid_loader, search_times, **param):
                 pbar_train.update(1)
 
         with tqdm.tqdm(total=num_batch_valid) as pbar_valid:
-            for i, data in enumerate(valid_loader, 0): # Evaluation for one batch
-                if criterion.__class__.__name__ != 'TripletLoss':
-                    img0, img1, label = data
-                    img0, img1, label = img0.to(device), img1.to(device), label.to(device)
-                    output1, output2 = net(img0), net(img1)
-                    loss = criterion(output1, output2, label)
-                else:
+            for _, data in enumerate(valid_loader, 0): # Evaluation for one batch
+                if criterion.__class__.__name__ == 'TripletLoss':
                     img0, img1, img2 = data
                     img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
                     output1, output2, output3 = net(img0), net(img1), net(img2)
                     loss = criterion(output1, output2, output3)
+                elif criterion.__class__.__name__ == 'CrossEntropyLoss':
+                    img0, img1, label = data
+                    img0, img1, label = img0.to(device), img1.to(device), label.to(device)
+                    output = net.forward_metric_learning(img0, img1)
+                    loss = criterion(output, label.view(label.shape[0]).long())
+                else:
+                    img0, img1, label = data
+                    img0, img1, label = img0.to(device), img1.to(device), label.to(device)
+                    output1, output2 = net(img0), net(img1)
+                    loss = criterion(output1, output2, label)
                 loss_per_batch["valid_loss"].append(loss.item())
                 pbar_valid.set_description("valid loss: {:.4f}".format(np.mean(loss_per_batch['valid_loss'])))
                 pbar_valid.update(1)
@@ -148,7 +161,8 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 grid_search = {
     "model": [model.DeepID()],
     #"loss_func": [loss.ContrastiveLoss],
-    "loss_func": [loss.TripletLoss],
+    #"loss_func": [loss.TripletLoss],
+    "loss_func": [nn.CrossEntropyLoss],
     "metric": [partial(F.pairwise_distance, p=2)],
     #"lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
     "lr": [0.005]
