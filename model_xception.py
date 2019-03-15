@@ -7,6 +7,7 @@ import torch.utils.model_zoo as model_zoo
 from torch.nn import init
 
 
+scaler, margin = 2, 0.2
 class SeparableConv2d(nn.Module):
     def __init__(self,in_channels,out_channels,kernel_size=1,stride=1,padding=0,dilation=1,bias=False):
         super(SeparableConv2d,self).__init__()
@@ -72,7 +73,7 @@ class Block(nn.Module):
 
 
 class Xception(nn.Module):
-    input_size = (299, 299) # Input should be RGB.
+    input_size = (3, 299, 299) # Input should be RGB.
     """
     Xception optimized for the ImageNet dataset, as specified in
     https://arxiv.org/pdf/1610.02357.pdf
@@ -119,6 +120,7 @@ class Xception(nn.Module):
         self.bn4 = nn.BatchNorm2d(2048)
 
         self.fc = nn.Linear(2048, num_classes)
+        self.metric_layer = nn.Linear(num_classes, 2, bias=False)
 
         # #------- init weights --------
         # for m in self.modules():
@@ -172,6 +174,22 @@ class Xception(nn.Module):
         x = self.features(input)
         x = self.logits(x)
         return x
+    
+    def forward_logistic_loss(self, x1, x2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        out = self.metric_layer((out1 - out2).abs()) 
+        return out
+
+    def forward_cosine_face(self, x1, x2, y, s=scaler, m=margin):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [[i for i in range(out.shape[0])], y.numpy()]
+        out[idx] -= m
+        out *= s
+        return out
+
 
 def xception(num_classes=1000):
     model = Xception(num_classes=num_classes)

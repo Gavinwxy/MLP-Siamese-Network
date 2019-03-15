@@ -15,6 +15,7 @@ from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
 from functools import partial
 from copy import deepcopy
+import model_resnet 
 
 seed = 0
 random.seed(seed)
@@ -168,7 +169,7 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model.DeepID()],
+    "model": [model_resnet.resnet50()],
     #"loss_func": [loss.ContrastiveLoss],
     #"loss_func": [loss.TripletLoss],
     #"loss_func": [loss.LogisticLoss],

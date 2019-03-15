@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+scaler, margin = 2, 0.2
 # Input should be RGB 3 channel image. Default size (3, 224, 224)
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -86,7 +87,7 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    input_size = (224, 224)  # default 3*152*152, but flexible on height and width.
+    input_size = (3, 224, 224)  # default 3*152*152, but flexible on height and width.
     
     def __init__(self, block, layers, feature_dim=1000, zero_init_residual=False):
         super(ResNet, self).__init__()
@@ -102,6 +103,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, feature_dim)
+        self.metric_layer = nn.Linear(1000, 2, bias=False)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -152,7 +154,21 @@ class ResNet(nn.Module):
         x = self.fc(x)
 
         return x
+    
+    def forward_logistic_loss(self, x1, x2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        out = self.metric_layer((out1 - out2).abs()) 
+        return out
 
+    def forward_cosine_face(self, x1, x2, y, s=scaler, m=margin):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [[i for i in range(out.shape[0])], y.numpy()]
+        out[idx] -= m
+        out *= s
+        return out
 
 def resnet50():
     model = ResNet(Bottleneck, [3, 4, 6, 3])
