@@ -36,3 +36,11 @@ class TripletLoss(torch.nn.Module):
         loss_triplet = torch.sum(torch.clamp(distance1.pow(2) - distance2.pow(2) + self.margin, min=0.0))
 
         return loss_triplet
+
+class LogisticLoss(nn.CrossEntropyLoss):
+    def __init__(self):
+        nn.CrossEntropyLoss.__init__(self)
+    
+class CosFace(nn.CrossEntropyLoss):
+    def __init__(self):
+        nn.CrossEntropyLoss.__init__(self)

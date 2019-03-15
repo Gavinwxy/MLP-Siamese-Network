@@ -1,6 +1,6 @@
 import os
 import random
-import model_metric_layer as model
+import model
 import loss
 import torch
 import torch.nn as nn
@@ -23,9 +23,10 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train(train_loader, valid_loader, search_times, **param):
     global device
+    metric_learning_losses = {'LogisticLoss', 'CosFace'}
 
     net = deepcopy(param['model']).to(device)
-    if param['loss_func'].__name__ == 'CrossEntropyLoss':
+    if param['loss_func'].__name__ in metric_learning_losses:
         criterion = param['loss_func']()
     else:
         criterion = param['loss_func'](metric=param['metric'])
@@ -47,11 +48,15 @@ def train(train_loader, valid_loader, search_times, **param):
                     img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
                     output1, output2, output3 = net(img0), net(img1), net(img2)
                     loss = criterion(output1, output2, output3)
-                elif criterion.__class__.__name__ == 'CrossEntropyLoss':
+                elif criterion.__class__.__name__ in metric_learning_losses:
                     img0, img1, label = data
                     img0, img1, label = img0.to(device), img1.to(device), label.to(device)
-                    output = net.forward_metric_learning(img0, img1)
-                    loss = criterion(output, label.view(label.shape[0]).long())
+                    label_flatten = label.view(label.shape[0]).long()
+                    if criterion.__class__.__name__ == 'LogisticLoss':
+                        output = net.forward_logistic_loss(img0, img1)
+                    else:
+                        output = net.forward_cosine_face(img0, img1, label_flatten)
+                    loss = criterion(output, label_flatten)
                 else:
                     img0, img1, label = data
                     img0, img1, label = img0.to(device), img1.to(device), label.to(device)
@@ -72,11 +77,15 @@ def train(train_loader, valid_loader, search_times, **param):
                     img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
                     output1, output2, output3 = net(img0), net(img1), net(img2)
                     loss = criterion(output1, output2, output3)
-                elif criterion.__class__.__name__ == 'CrossEntropyLoss':
+                elif criterion.__class__.__name__ in metric_learning_losses:
                     img0, img1, label = data
                     img0, img1, label = img0.to(device), img1.to(device), label.to(device)
-                    output = net.forward_metric_learning(img0, img1)
-                    loss = criterion(output, label.view(label.shape[0]).long())
+                    label_flatten = label.view(label.shape[0]).long()
+                    if criterion.__class__.__name__ == 'LogisticLoss':
+                        output = net.forward_logistic_loss(img0, img1)
+                    else:
+                        output = net.forward_cosine_face(img0, img1, label_flatten)
+                    loss = criterion(output, label_flatten)
                 else:
                     img0, img1, label = data
                     img0, img1, label = img0.to(device), img1.to(device), label.to(device)
@@ -162,7 +171,8 @@ grid_search = {
     "model": [model.DeepID()],
     #"loss_func": [loss.ContrastiveLoss],
     #"loss_func": [loss.TripletLoss],
-    "loss_func": [nn.CrossEntropyLoss],
+    #"loss_func": [loss.LogisticLoss],
+    "loss_func": [loss.CosFace],
     "metric": [partial(F.pairwise_distance, p=2)],
     #"lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
     "lr": [0.005]

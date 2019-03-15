@@ -28,7 +28,7 @@ class DeepID(nn.Module):
         self.fc1 = nn.Linear(360, 160)
         self.fc2 = nn.Linear(160, 160)
         self.bn = nn.BatchNorm1d(160)
-        self.metric_layer = nn.Linear(160, 2)
+        self.metric_layer = nn.Linear(160, 2, bias=False)
 
     def forward(self, x):
         ### Locally connected layers implemented!
@@ -42,9 +42,19 @@ class DeepID(nn.Module):
         out = F.relu(out)  # Element-wise sum with ReLU
         return out
     
-    def forward_metric_learning(self, x1, x2):
+    def forward_logistic_loss(self, x1, x2):
         out1, out2 = self.forward(x1), self.forward(x2)
         out = self.metric_layer((out1 - out2).abs()) 
+        return out
+
+    def forward_cosine_face(self, x1, x2, y, s=2, m=0.2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [[i for i in range(out.shape[0])], y.numpy()]
+        out[idx] -= m
+        out *= s
         return out
 
 class ChopraNet(nn.Module):
@@ -67,7 +77,7 @@ class ChopraNet(nn.Module):
         self.conv3 = nn.Conv2d(45, 250, 5)
         # Fully-connected layer
         self.fc1 = nn.Linear(250, 50)
-        self.metric_layer = nn.Linear(50, 2)
+        self.metric_layer = nn.Linear(50, 2, bias=False)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -93,9 +103,19 @@ class ChopraNet(nn.Module):
         x = self.fc1(x)
         return x
     
-    def forward_metric_learning(self, x1, x2):
+    def forward_logistic_loss(self, x1, x2):
         out1, out2 = self.forward(x1), self.forward(x2)
         out = self.metric_layer((out1 - out2).abs()) 
+        return out
+
+    def forward_cosine_face(self, x1, x2, y, s=2, m=0.2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [[i for i in range(out.shape[0])], y.numpy()]
+        out[idx] -= m
+        out *= s
         return out
 
 class DeepFace(nn.Module):
@@ -113,7 +133,7 @@ class DeepFace(nn.Module):
         self.localconv3 = nn.Conv2dLocal(in_channels=16, out_channels=16, in_height=25, in_width=25, kernel_size=5,
                                          stride=1, padding=0)
         self.fc1 = nn.Linear(16*21*21, 4096)    # input dim here?
-        self.metric_layer = nn.Linear(4096, 2)
+        self.metric_layer = nn.Linear(4096, 2, bias=False)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -126,7 +146,17 @@ class DeepFace(nn.Module):
         x = self.fc1(x)
         return x
 
-    def forward_metric_learning(self, x1, x2):
+    def forward_logistic_loss(self, x1, x2):
         out1, out2 = self.forward(x1), self.forward(x2)
         out = self.metric_layer((out1 - out2).abs()) 
+        return out
+
+    def forward_cosine_face(self, x1, x2, y, s=2, m=0.2):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [[i for i in range(out.shape[0])], y.numpy()]
+        out[idx] -= m
+        out *= s
         return out
