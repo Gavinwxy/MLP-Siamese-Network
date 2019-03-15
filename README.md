@@ -13,6 +13,7 @@ Investigate Siamese Network for Face Verification
 - [x] Contrastive Loss
 - [x] Triplet Loss
 - [x] Logistic Loss
+- [x] CosFace Loss 
 ### Engineering Part
 - [x] GPU server configuration - Google Cloud Computing
 - [x] Evaluation Metric - ROC-AUC

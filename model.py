@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Hyperparameter of CosFace:
+scaler, margin = 2, 0.2
 
 class DeepID(nn.Module):
     input_size = (1, 39, 31)
@@ -47,7 +49,7 @@ class DeepID(nn.Module):
         out = self.metric_layer((out1 - out2).abs()) 
         return out
 
-    def forward_cosine_face(self, x1, x2, y, s=2, m=0.2):
+    def forward_cosine_face(self, x1, x2, y, s=scaler, m=margin):
         out1, out2 = self.forward(x1), self.forward(x2)
         x = (out1 - out2).abs()
         out = self.metric_layer(x)
@@ -108,7 +110,7 @@ class ChopraNet(nn.Module):
         out = self.metric_layer((out1 - out2).abs()) 
         return out
 
-    def forward_cosine_face(self, x1, x2, y, s=2, m=0.2):
+    def forward_cosine_face(self, x1, x2, y, s=scaler, m=margin):
         out1, out2 = self.forward(x1), self.forward(x2)
         x = (out1 - out2).abs()
         out = self.metric_layer(x)
@@ -151,7 +153,7 @@ class DeepFace(nn.Module):
         out = self.metric_layer((out1 - out2).abs()) 
         return out
 
-    def forward_cosine_face(self, x1, x2, y, s=2, m=0.2):
+    def forward_cosine_face(self, x1, x2, y, s=scaler, m=margin):
         out1, out2 = self.forward(x1), self.forward(x2)
         x = (out1 - out2).abs()
         out = self.metric_layer(x)
