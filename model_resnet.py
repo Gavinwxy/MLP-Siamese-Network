@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 scaler, margin = 2, 0.2
+
 # Input should be RGB 3 channel image. Default size (3, 224, 224)
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -89,7 +89,7 @@ class Bottleneck(nn.Module):
 class ResNet(nn.Module):
     input_size = (3, 224, 224)  # default 3*152*152, but flexible on height and width.
     
-    def __init__(self, block, layers, feature_dim=1000, zero_init_residual=False):
+    def __init__(self, block, layers, feature_dim=2, zero_init_residual=False):
         super(ResNet, self).__init__()
         self.inplanes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -102,8 +102,7 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, feature_dim)
-        self.metric_layer = nn.Linear(1000, 2, bias=False)
+        self.metric_layer = nn.Linear(512 * block.expansion, feature_dim, bias=False)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -151,7 +150,6 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
-        x = self.fc(x)
 
         return x
     

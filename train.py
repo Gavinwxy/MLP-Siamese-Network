@@ -16,6 +16,7 @@ import torch.nn.functional as F
 from functools import partial
 from copy import deepcopy
 import model_resnet 
+import model_xception
 
 seed = 0
 random.seed(seed)
@@ -169,7 +170,7 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model_resnet.resnet50()],
+    "model": [model_xception.xception()],
     #"loss_func": [loss.ContrastiveLoss],
     #"loss_func": [loss.TripletLoss],
     #"loss_func": [loss.LogisticLoss],

@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 from torch.nn import init
 
-
 scaler, margin = 2, 0.2
+
 class SeparableConv2d(nn.Module):
     def __init__(self,in_channels,out_channels,kernel_size=1,stride=1,padding=0,dilation=1,bias=False):
         super(SeparableConv2d,self).__init__()
@@ -78,7 +78,7 @@ class Xception(nn.Module):
     Xception optimized for the ImageNet dataset, as specified in
     https://arxiv.org/pdf/1610.02357.pdf
     """
-    def __init__(self, num_classes=1000):
+    def __init__(self, num_classes=2):
         """ Constructor
         Args:
             num_classes: number of classes
@@ -119,8 +119,7 @@ class Xception(nn.Module):
         self.conv4 = SeparableConv2d(1536,2048,3,1,1)
         self.bn4 = nn.BatchNorm2d(2048)
 
-        self.fc = nn.Linear(2048, num_classes)
-        self.metric_layer = nn.Linear(num_classes, 2, bias=False)
+        self.metric_layer = nn.Linear(2048, num_classes)
 
         # #------- init weights --------
         # for m in self.modules():
@@ -167,23 +166,22 @@ class Xception(nn.Module):
 
         x = F.adaptive_avg_pool2d(x, (1, 1))
         x = x.view(x.size(0), -1)
-        x = self.last_linear(x)
+        x = self.metric_layer(x)
         return x
 
     def forward(self, input):
         x = self.features(input)
-        x = self.logits(x)
         return x
     
     def forward_logistic_loss(self, x1, x2):
         out1, out2 = self.forward(x1), self.forward(x2)
-        out = self.metric_layer((out1 - out2).abs()) 
+        out = self.logits((out1 - out2).abs())
         return out
 
     def forward_cosine_face(self, x1, x2, y, s=scaler, m=margin):
         out1, out2 = self.forward(x1), self.forward(x2)
         x = (out1 - out2).abs()
-        out = self.metric_layer(x)
+        out = self.logits(x)
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
         idx = [[i for i in range(out.shape[0])], y.numpy()]
         out[idx] -= m
@@ -191,10 +189,6 @@ class Xception(nn.Module):
         return out
 
 
-def xception(num_classes=1000):
-    model = Xception(num_classes=num_classes)
-    model.last_linear = model.fc
-    del model.fc
+def xception():
+    model = Xception()
     return model
-
-
