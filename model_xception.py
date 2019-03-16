@@ -119,7 +119,7 @@ class Xception(nn.Module):
         self.conv4 = SeparableConv2d(1536,2048,3,1,1)
         self.bn4 = nn.BatchNorm2d(2048)
 
-        self.metric_layer = nn.Linear(2048, num_classes)
+        self.metric_layer = nn.Linear(2048, num_classes, bias=False)
 
         # #------- init weights --------
         # for m in self.modules():
