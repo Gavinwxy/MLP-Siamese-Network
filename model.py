@@ -54,7 +54,7 @@ class DeepID(nn.Module):
         x = (out1 - out2).abs()
         out = self.metric_layer(x)
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
-        idx = [[i for i in range(out.shape[0])], y]
+        idx = [list(range(out.shape[0])), y]
         out[idx] -= m
         out *= s
         return out
@@ -115,7 +115,7 @@ class ChopraNet(nn.Module):
         x = (out1 - out2).abs()
         out = self.metric_layer(x)
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
-        idx = [[i for i in range(out.shape[0])], y]
+        idx = [list(range(out.shape[0])), y]
         out[idx] -= m
         out *= s
         return out
@@ -158,7 +158,7 @@ class DeepFace(nn.Module):
         x = (out1 - out2).abs()
         out = self.metric_layer(x)
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
-        idx = [[i for i in range(out.shape[0])], y]
+        idx = [list(range(out.shape[0])), y]
         out[idx] -= m
         out *= s
         return out
