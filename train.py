@@ -170,7 +170,7 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model_xception.xception()],
+    "model": [model.DeepID()],
     #"loss_func": [loss.ContrastiveLoss],
     #"loss_func": [loss.TripletLoss],
     #"loss_func": [loss.LogisticLoss],

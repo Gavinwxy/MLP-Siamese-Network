@@ -183,7 +183,7 @@ class Xception(nn.Module):
         x = (out1 - out2).abs()
         out = self.logits(x)
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
-        idx = [[i for i in range(out.shape[0])], y.numpy()]
+        idx = [[i for i in range(out.shape[0])], y]
         out[idx] -= m
         out *= s
         return out
