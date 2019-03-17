@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 scaler, margin = 2, 0.2
+scaler_, margin_ = 2, 0.2
 
 # Input should be RGB 3 channel image. Default size (3, 224, 224)
 def conv3x3(in_planes, out_planes, stride=1):
@@ -165,6 +166,16 @@ class ResNet(nn.Module):
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
         idx = [list(range(out.shape[0])), y]
         out[idx] -= m
+        out *= s
+        return out
+
+    def forward_arc_face(self, x1, x2, y, s=scaler_, m=margin_):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [list(range(out.shape[0])), y]
+        out[idx] = torch.cos(torch.acos(out[idx]) + m)
         out *= s
         return out
 

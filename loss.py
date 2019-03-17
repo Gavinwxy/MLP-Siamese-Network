@@ -44,3 +44,7 @@ class LogisticLoss(nn.CrossEntropyLoss):
 class CosFace(nn.CrossEntropyLoss):
     def __init__(self):
         nn.CrossEntropyLoss.__init__(self)
+
+class ArcFace(nn.CrossEntropyLoss):
+    def __init__(self):
+        nn.CrossEntropyLoss.__init__(self)

@@ -7,6 +7,7 @@ import torch.utils.model_zoo as model_zoo
 from torch.nn import init
 
 scaler, margin = 2, 0.2
+scaler_, margin_ = 2, 0.2
 
 class SeparableConv2d(nn.Module):
     def __init__(self,in_channels,out_channels,kernel_size=1,stride=1,padding=0,dilation=1,bias=False):
@@ -185,6 +186,16 @@ class Xception(nn.Module):
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
         idx = [list(range(out.shape[0])), y]
         out[idx] -= m
+        out *= s
+        return out
+
+    def forward_arc_face(self, x1, x2, y, s=scaler_, m=margin_):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [list(range(out.shape[0])), y]
+        out[idx] = torch.cos(torch.acos(out[idx]) + m)
         out *= s
         return out
 

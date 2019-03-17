@@ -25,7 +25,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train(train_loader, valid_loader, search_times, **param):
     global device
-    metric_learning_losses = {'LogisticLoss', 'CosFace'}
+    metric_learning_losses = {'LogisticLoss', 'CosFace', 'ArcFace'}
 
     net = deepcopy(param['model']).to(device)
     if param['loss_func'].__name__ in metric_learning_losses:
@@ -170,14 +170,15 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model.DeepID()],
+    "model": [model.ChopraNet()],
     #"loss_func": [loss.ContrastiveLoss],
-    #"loss_func": [loss.TripletLoss],
+    "loss_func": [loss.TripletLoss],
     #"loss_func": [loss.LogisticLoss],
-    "loss_func": [loss.CosFace],
+    #"loss_func": [loss.CosFace],
+    #"loss_func": [loss.ArcFace],
     "metric": [partial(F.pairwise_distance, p=2)],
     #"lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
-    "lr": [0.005]
+    "lr": [1e-2]
 }
 
 train_dataset = datasets.ImageFolder(root=Config.train_dir)

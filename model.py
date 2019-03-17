@@ -5,6 +5,9 @@ import torch.nn.functional as F
 # Hyperparameter of CosFace:
 scaler, margin = 2, 0.2
 
+# Hyperparameter of ArcFace:
+scaler_, margin_ = 2, 0.2
+
 class DeepID(nn.Module):
     input_size = (1, 39, 31)
 
@@ -56,6 +59,16 @@ class DeepID(nn.Module):
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
         idx = [list(range(out.shape[0])), y]
         out[idx] -= m
+        out *= s
+        return out
+
+    def forward_arc_face(self, x1, x2, y, s=scaler_, m=margin_):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [list(range(out.shape[0])), y]
+        out[idx] = torch.cos(torch.acos(out[idx]) + m)
         out *= s
         return out
 
@@ -120,6 +133,18 @@ class ChopraNet(nn.Module):
         out *= s
         return out
 
+    def forward_arc_face(self, x1, x2, y, s=scaler_, m=margin_):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [list(range(out.shape[0])), y]
+        out[idx] = torch.cos(torch.acos(out[idx]) + m)
+        out *= s
+        return out
+
+
+
 class DeepFace(nn.Module):
     input_size = (3, 152, 152)
 
@@ -160,5 +185,15 @@ class DeepFace(nn.Module):
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
         idx = [list(range(out.shape[0])), y]
         out[idx] -= m
+        out *= s
+        return out
+
+    def forward_arc_face(self, x1, x2, y, s=scaler_, m=margin_):
+        out1, out2 = self.forward(x1), self.forward(x2)
+        x = (out1 - out2).abs()
+        out = self.metric_layer(x)
+        out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
+        idx = [list(range(out.shape[0])), y]
+        out[idx] = torch.cos(torch.acos(out[idx]) + m)
         out *= s
         return out
