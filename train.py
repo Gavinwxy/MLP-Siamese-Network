@@ -32,7 +32,7 @@ def train(train_loader, valid_loader, search_times, **param):
         criterion = param['loss_func']()
     else:
         criterion = param['loss_func'](metric=param['metric'])
-    optimizer = optim.Adam(net.parameters(), lr=param['lr'])
+    optimizer = optim.Adam(net.parameters(), lr=param['lr'], weight_decay=5e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, Config.train_number_epochs) 
     loss_per_epoch = {"train_loss": [], "valid_loss": []}
     num_batch_train = len(train_loader)
