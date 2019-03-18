@@ -4,6 +4,7 @@ import model
 import loss
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import optim
 from torchvision import transforms, datasets
 from torch.autograd import Variable
@@ -12,7 +13,6 @@ from Config import Config
 import tqdm
 import numpy as np
 from sklearn.metrics import roc_auc_score
-import torch.nn.functional as F
 from functools import partial
 from copy import deepcopy
 import model_resnet 
@@ -21,11 +21,11 @@ import model_xception
 seed = 0
 random.seed(seed)
 torch.manual_seed(seed)
+metric_learning_losses = {'LogisticLoss', 'CosFace', 'ArcFace'}
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train(train_loader, valid_loader, search_times, **param):
     global device
-    metric_learning_losses = {'LogisticLoss', 'CosFace', 'ArcFace'}
 
     net = deepcopy(param['model']).to(device)
     if param['loss_func'].__name__ in metric_learning_losses:
@@ -56,8 +56,10 @@ def train(train_loader, valid_loader, search_times, **param):
                     label_flatten = label.view(label.shape[0]).long()
                     if criterion.__class__.__name__ == 'LogisticLoss':
                         output = net.forward_logistic_loss(img0, img1)
-                    else:
+                    elif criterion.__class__.__name__ == 'CosFace':
                         output = net.forward_cosine_face(img0, img1, label_flatten)
+                    else:
+                        output = net.forward_arc_face(img0, img1, label_flatten)
                     loss = criterion(output, label_flatten)
                 else:
                     img0, img1, label = data
@@ -85,8 +87,10 @@ def train(train_loader, valid_loader, search_times, **param):
                     label_flatten = label.view(label.shape[0]).long()
                     if criterion.__class__.__name__ == 'LogisticLoss':
                         output = net.forward_logistic_loss(img0, img1)
-                    else:
+                    elif criterion.__class__.__name__ == 'CosFace':
                         output = net.forward_cosine_face(img0, img1, label_flatten)
+                    else:
+                        output = net.forward_arc_face(img0, img1, label_flatten)
                     loss = criterion(output, label_flatten)
                 else:
                     img0, img1, label = data
@@ -109,7 +113,8 @@ def train(train_loader, valid_loader, search_times, **param):
 def evaluate(test_loader, loop_times, **param):
     global device
 
-    net = deepcopy(param['best_net']).to(device)
+    net = param['best_net']
+    criterion = param['loss_func']
     metric = param['metric']
 
     roc_auc_scores = []
@@ -117,14 +122,25 @@ def evaluate(test_loader, loop_times, **param):
         for _ in range(loop_times):
             y_true = []
             y_score = []
-            for i, data in enumerate(test_loader, 0):
+            for _, data in enumerate(test_loader, 0):
                 img0, img1, label = data
-                img0, img1, label = img0.to(device), img1.to(device), label.to(device)
-                output1, output2 = net(img0), net(img1)
-                distance = metric(output1, output2)
+                img0, img1, label = img0.to(device), img1.to(device), label.item()
 
-                y_true.append(label.item())
-                y_score.append(distance.item())
+                distance = None
+                if criterion.__name__ in metric_learning_losses:
+                    if criterion.__name__ == 'LogisticLoss':
+                        distance = net.forward_logistic_loss(img0, img1)[0, 1].item()
+                    if criterion.__name__ == 'CosFace':
+                        distance = net.forward_cosine_face(img0, img1)[0, 1].item()
+                    else:
+                        distance = net.forward_arc_face(img0, img1)[0, 1].item()
+                else:
+                    output1, output2 = net(img0), net(img1)
+                    distance = metric(output1, output2).item()
+
+                if not np.isnan(distance):
+                    y_true.append(label)
+                    y_score.append(distance)
 
             roc_auc_scores.append(roc_auc_score(y_true, y_score))
             pbar_test.set_description("ROC_AUC score: {:.4f}".format(np.mean(roc_auc_scores)))
@@ -170,15 +186,15 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
 
 grid_search = {
-    "model": [model.ChopraNet()],
+    "model": [model.DeepID()],
     #"loss_func": [loss.ContrastiveLoss],
-    "loss_func": [loss.TripletLoss],
+    #"loss_func": [loss.TripletLoss],
     #"loss_func": [loss.LogisticLoss],
     #"loss_func": [loss.CosFace],
-    #"loss_func": [loss.ArcFace],
+    "loss_func": [loss.ArcFace],
     "metric": [partial(F.pairwise_distance, p=2)],
     #"lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
-    "lr": [1e-2]
+    "lr": [0.005]
 }
 
 train_dataset = datasets.ImageFolder(root=Config.train_dir)
@@ -219,8 +235,10 @@ best_net = deepcopy(best_config['model']).to(device)
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
 best_net.eval()
 
-_, _, test_loader = data_loaders(best_net, best_config['loss_func'], train_dataset, valid_dataset, test_dataset)
-roc_auc_score = evaluate(test_loader, Config.evaluation_times, best_net=best_net, metric=best_config['metric'])
+loss_func = best_config['loss_func']
+
+_, _, test_loader = data_loaders(best_net, loss_func, train_dataset, valid_dataset, test_dataset)
+roc_auc_score = evaluate(test_loader, Config.evaluation_times, best_net=best_net, loss_func=loss_func, metric=best_config['metric'])
 
 best_config['roc_auc_score'] = roc_auc_score
 np.save('best_config.npy', best_config)
