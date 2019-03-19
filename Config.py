@@ -7,4 +7,5 @@ class Config():
     train_number_epochs = 10
     train_batch_size = 100
     valid_batch_size = 100
-    evaluation_times = 5
+    evaluation_times_valid = 3
+    evaluation_times_test = 5
