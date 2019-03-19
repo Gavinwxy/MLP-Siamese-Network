@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-scaler, margin = 2, 0.2
-scaler_, margin_ = 2, 0.2
+scaler, margin = 200,0.035
+scaler_, margin_ = 200,0.025
 
 # Input should be RGB 3 channel image. Default size (3, 224, 224)
 def conv3x3(in_planes, out_planes, stride=1):

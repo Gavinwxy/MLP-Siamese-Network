@@ -8,7 +8,7 @@ class ContrastiveLoss(torch.nn.Module):
     Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
-    def __init__(self, metric, margin=2.0):
+    def __init__(self, metric, margin=2.5):
         super(ContrastiveLoss, self).__init__()
         self.metric = metric
         self.margin = margin
@@ -25,7 +25,7 @@ class TripletLoss(torch.nn.Module):
     Based on: https://arxiv.org/pdf/1503.03832.pdf
     """
 
-    def __init__(self, metric, margin=2.0):
+    def __init__(self, metric, margin=45):
         super(TripletLoss, self).__init__()
         self.metric = metric
         self.margin = margin

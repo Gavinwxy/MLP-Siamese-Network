@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
 from torch.nn import init
 
-scaler, margin = 2, 0.2
-scaler_, margin_ = 2, 0.2
+scaler, margin = 200,0.035
+scaler_, margin_ = 200,0.025
 
 class SeparableConv2d(nn.Module):
     def __init__(self,in_channels,out_channels,kernel_size=1,stride=1,padding=0,dilation=1,bias=False):

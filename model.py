@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # Hyperparameter of CosFace:
-scaler, margin = 2, 0.2
+scaler, margin = 200, 0.035
 
 # Hyperparameter of ArcFace:
-scaler_, margin_ = 2, 0.2
+scaler_, margin_ = 200, 0.025
 
 class DeepID(nn.Module):
     input_size = (1, 39, 31)
