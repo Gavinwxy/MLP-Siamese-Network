@@ -19,10 +19,17 @@ import model_resnet
 import model_xception
 
 seed = 0
+np.random.seed(seed)
 random.seed(seed)
 torch.manual_seed(seed)
 metric_learning_losses = {'LogisticLoss', 'CosFace', 'ArcFace'}
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+
+torch.backends.cudnn.enabled = False
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 def train(train_loader, valid_loader_loss, valid_loader_eval, search_times, **param):
     global device
@@ -199,7 +206,7 @@ grid_search = {
     "loss_func": [loss.ArcFace],
     "metric": [partial(F.pairwise_distance, p=2)],
     #"lr": [1e-07, 5e-06, 0.0001, 0.005, 0.1]
-    "lr": [0.005]
+    "lr": [3e-3]
 }
 
 train_dataset = datasets.ImageFolder(root=Config.train_dir)
