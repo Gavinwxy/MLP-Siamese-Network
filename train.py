@@ -31,7 +31,7 @@ torch.backends.cudnn.enabled = False
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
-def train(train_loader, valid_loader_loss, valid_loader_eval, search_times, **param):
+def train(train_loader, valid_loader, search_times, **param):
     global device
 
     net = deepcopy(param['model']).to(device)
@@ -43,7 +43,7 @@ def train(train_loader, valid_loader_loss, valid_loader_eval, search_times, **pa
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, Config.train_number_epochs) 
     loss_per_epoch = {"train_loss": [], "valid_loss": []}
     num_batch_train = len(train_loader)
-    num_batch_valid = len(valid_loader_loss)
+    num_batch_valid = len(valid_loader)
 
     best_epoch = 1
     for epoch in range(Config.train_number_epochs):
@@ -82,7 +82,7 @@ def train(train_loader, valid_loader_loss, valid_loader_eval, search_times, **pa
                 pbar_train.update(1)
 
         with tqdm.tqdm(total=num_batch_valid) as pbar_valid:
-            for _, data in enumerate(valid_loader_loss, 0): # Evaluation for one batch
+            for _, data in enumerate(valid_loader, 0): # Evaluation for one batch
                 if criterion.__class__.__name__ == 'TripletLoss':
                     img0, img1, img2 = data
                     img0, img1, img2 = img0.to(device), img1.to(device), img2.to(device)
@@ -115,13 +115,9 @@ def train(train_loader, valid_loader_loss, valid_loader_eval, search_times, **pa
                 best_epoch = epoch + 1                       
                 torch.save(net.state_dict(), f=os.path.join(Config.saved_models_dir, 'model' + str(search_times) + '.pth')) # Model saving, Only save the parameters (Recommended)
 
-    net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(search_times) + '.pth')))
-    net.eval()
-    print ()
-    valid_roc_auc = evaluate(valid_loader_eval, Config.evaluation_times_valid, stage='valid', best_net=net, loss_func=param['loss_func'], metric=param['metric'])
-    return valid_roc_auc, best_epoch
+    return np.min(loss_per_epoch['valid_loss']), best_epoch
 
-def evaluate(test_loader, loop_times, stage, **param):
+def evaluate(test_loader, loop_times, **param):
     global device
 
     net = param['best_net']
@@ -154,7 +150,7 @@ def evaluate(test_loader, loop_times, stage, **param):
                     y_score.append(distance)
 
             roc_auc_scores.append(roc_auc_score(y_true, y_score))
-            pbar_test.set_description(stage + " ROC_AUC score: {:.4f}".format(np.mean(roc_auc_scores)))
+            pbar_test.set_description("ROC_AUC score: {:.4f}".format(np.mean(roc_auc_scores)))
             pbar_test.update(1)
 
     return np.mean(roc_auc_scores)
@@ -170,31 +166,30 @@ def data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset):
 
     if loss_func.__name__ != 'TripletLoss':
         train_dataset = SiameseNetworkDataset(imageFolderDataset=train_dataset,
-                                                    transform=data_transform,
-                                                    grayscale=grayscale)
+                                                       transform=data_transform,
+                                                       grayscale=grayscale)
 
         valid_dataset = SiameseNetworkDataset(imageFolderDataset=valid_dataset,
-                                                    transform=data_transform,
-                                                    grayscale=grayscale)
+                                                       transform=data_transform,
+                                                       grayscale=grayscale)
     else:
         train_dataset = TripletDataset(imageFolderDataset=train_dataset,
-                                                    transform=data_transform,
-                                                    grayscale=grayscale)
+                                                transform=data_transform,
+                                                grayscale=grayscale)
 
         valid_dataset = TripletDataset(imageFolderDataset=valid_dataset,
-                                                    transform=data_transform,
-                                                    grayscale=grayscale)
+                                                transform=data_transform,
+                                                grayscale=grayscale)
 
     test_dataset = SiameseNetworkDataset(imageFolderDataset=test_dataset,
-                                                    transform=data_transform,
-                                                    grayscale=grayscale)
+                                                  transform=data_transform,
+                                                  grayscale=grayscale)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=Config.train_batch_size, shuffle=True, num_workers=Config.num_workers)
-    valid_loader_loss = torch.utils.data.DataLoader(valid_dataset, batch_size=Config.valid_batch_size, shuffle=True, num_workers=Config.num_workers)
-    valid_loader_eval = torch.utils.data.DataLoader(valid_dataset, batch_size=1, shuffle=True, num_workers=Config.num_workers)
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=Config.valid_batch_size, shuffle=True, num_workers=Config.num_workers)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=Config.num_workers)
 
-    return train_loader, valid_loader_loss, valid_loader_eval, test_loader
+    return train_loader, valid_loader, test_loader
 
 
 grid_search = {
@@ -217,23 +212,24 @@ search_times = 1
 # Dictionary that stores the best configuration:
 best_config = {key:None for key in grid_search.keys()}
 best_config['search_best'] = 0
-best_config['valid_roc_auc'] = 0
+best_config['best_valid_loss'] = np.inf
 best_config['best_epoch'] = 1
 
 for model in grid_search['model']:
-    for loss_func in grid_search['loss_func']:
-        for metric in grid_search['metric']:
-            for lr in grid_search['lr']:
-                train_loader, valid_loader_loss, valid_loader_eval, _ = data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset)
-                valid_roc_auc, best_epoch = train(train_loader, valid_loader_loss, valid_loader_eval, search_times, model=model, loss_func=loss_func, metric=metric, lr=lr)
-                
-                if valid_roc_auc > best_config['valid_roc_auc']:
+    for metric in grid_search['metric']:
+        for lr in grid_search['lr']:
+            valid_losses = []
+            for loss_func in grid_search['loss_func']:
+                train_loader, valid_loader, _ = data_loaders(model, loss_func, train_dataset, valid_dataset, test_dataset)
+                best_valid_loss, best_epoch = train(train_loader, valid_loader, search_times, model=model, loss_func=loss_func, metric=metric, lr=lr)
+
+                if best_valid_loss < best_config['best_valid_loss']:                
                     best_config['model'] = model
                     best_config['loss_func'] = loss_func
                     best_config['metric'] = metric
                     best_config['lr'] = lr
                     best_config['search_best'] = search_times
-                    best_config['valid_roc_auc'] = valid_roc_auc
+                    best_config['best_valid_loss'] = best_valid_loss
                     best_config['best_epoch'] = best_epoch
 
                     np.save('best_config.npy', best_config)
@@ -241,7 +237,7 @@ for model in grid_search['model']:
                 print("\nGrid search {} is completed.\n".format(search_times))
                 search_times += 1
 
-print("The best model is model {} with best valid ROC_AUC score {:.4f}".format(best_config['search_best'], best_config['valid_roc_auc']))
+print("The best model is model {} with best valid loss {:.4f}".format(best_config['search_best'], best_config['best_valid_loss']))
 
 best_net = deepcopy(best_config['model']).to(device)
 best_net.load_state_dict(torch.load(os.path.join(Config.saved_models_dir, 'model' + str(best_config['search_best']) + '.pth'))) # Instantialize the model before loading the parameters
@@ -249,8 +245,8 @@ best_net.eval()
 
 loss_func = best_config['loss_func']
 
-_, _, _, test_loader = data_loaders(best_net, loss_func, train_dataset, valid_dataset, test_dataset)
-test_roc_auc = evaluate(test_loader, Config.evaluation_times_test, stage='test', best_net=best_net, loss_func=loss_func, metric=best_config['metric'])
+_, _, test_loader = data_loaders(best_net, loss_func, train_dataset, valid_dataset, test_dataset)
+test_roc_auc = evaluate(test_loader, Config.evaluation_times_test, best_net=best_net, loss_func=loss_func, metric=best_config['metric'])
 
 best_config['test_roc_auc'] = test_roc_auc
 np.save('best_config.npy', best_config)
