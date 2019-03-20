@@ -193,7 +193,7 @@ class Xception(nn.Module):
     def forward_arc_face(self, x1, x2, y=None, s=scaler_, m=margin_):
         out1, out2 = self.forward(x1), self.forward(x2)
         x = (out1 - out2).abs()
-        out = self.metric_layer(x)
+        out = self.logits(x)
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
         if y is not None:
             idx = [list(range(out.shape[0])), y]
