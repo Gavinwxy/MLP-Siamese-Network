@@ -167,22 +167,22 @@ class Xception(nn.Module):
 
         x = F.adaptive_avg_pool2d(x, (1, 1))
         x = x.view(x.size(0), -1)
-        x = self.metric_layer(x)
         return x
 
     def forward(self, input):
         x = self.features(input)
+        x = self.logits(x)
         return x
     
     def forward_logistic_loss(self, x1, x2):
         out1, out2 = self.forward(x1), self.forward(x2)
-        out = self.logits((out1 - out2).abs())
+        out = self.metric_layer((out1 - out2).abs())
         return out
 
     def forward_cosine_face(self, x1, x2, y=None, s=scaler, m=margin):
         out1, out2 = self.forward(x1), self.forward(x2)
         x = (out1 - out2).abs()
-        out = self.logits(x)
+        out = self.metric_layer(x)
         out /= x.norm() * self.metric_layer.weight.norm(dim=1).detach()
         if y is not None:
             idx = [list(range(out.shape[0])), y]
